@@ -145,13 +145,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               Masuk Akun Pengguna
             </h3>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Modal Body */}
@@ -219,15 +212,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-          <span>Sistem Inventaris Global Mart</span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-3 py-1.5 rounded-lg border border-slate-300 font-bold text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-          >
-            Tutup
-          </button>
+        <div className="p-4 bg-slate-50 border-t border-slate-200 text-center text-xs text-slate-500">
+          <span>Sistem Inventaris Global Mart (Protected)</span>
         </div>
       </div>
     </div>
