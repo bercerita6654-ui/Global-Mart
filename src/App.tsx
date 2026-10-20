@@ -12,12 +12,20 @@ import {
   SpreadsheetConfig,
   Customer,
   Supplier,
+  UserAccount,
+  UserRole,
   SALES_PERSONS,
   TARGET_SPREADSHEET_ID,
   TARGET_SPREADSHEET_URL,
   TARGET_SPREADSHEET_TITLE,
 } from './types/inventory.js';
-import { INITIAL_ITEMS, INITIAL_TRANSACTIONS, INITIAL_CUSTOMERS, INITIAL_SUPPLIERS } from './data/seedData.js';
+import {
+  INITIAL_ITEMS,
+  INITIAL_TRANSACTIONS,
+  INITIAL_CUSTOMERS,
+  INITIAL_SUPPLIERS,
+  INITIAL_ACCOUNTS,
+} from './data/seedData.js';
 import {
   calculateStockSummary,
   applyTransactionToItem,
@@ -40,6 +48,7 @@ import {
   appendSupplierToSheet,
   appendItemToSheet,
   appendSalesToSheet,
+  appendAccountToSheet,
   syncFullDataToSheet,
   testSpreadsheetConnection,
   fetchStockListFromSheet,
@@ -47,6 +56,7 @@ import {
   fetchSuppliersFromSheet,
   fetchTransactionsFromSheets,
   fetchSalesFromSheet,
+  fetchAccountsFromSheet,
 } from './services/googleSheets.js';
 
 // Components
@@ -57,10 +67,12 @@ import { CustomersView } from './components/CustomersView.js';
 import { SuppliersView } from './components/SuppliersView.js';
 import { TransactionHistoryView } from './components/TransactionHistoryView.js';
 import { ReportsView } from './components/ReportsView.js';
+import { AccountsView } from './components/AccountsView.js';
+import { LoginModal } from './components/LoginModal.js';
 import { TransactionModal } from './components/TransactionModal.js';
 import { SpreadsheetModal } from './components/SpreadsheetModal.js';
 import { ConfirmationModal } from './components/ConfirmationModal.js';
-import { CheckCircle2, AlertCircle, Info, X, ExternalLink, RefreshCw, FileSpreadsheet, Download } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Info, X, ExternalLink, RefreshCw, FileSpreadsheet, Download, ShieldCheck, UserCheck } from 'lucide-react';
 
 const STORAGE_KEYS = {
   ITEMS: 'stockflow_items_v2',
@@ -68,6 +80,8 @@ const STORAGE_KEYS = {
   CUSTOMERS: 'stockflow_customers_v1',
   SUPPLIERS: 'stockflow_suppliers_v1',
   SALES: 'stockflow_sales_v1',
+  ACCOUNTS: 'stockflow_accounts_v1',
+  ACTIVE_USER: 'stockflow_active_user_v1',
   SHEET_CONFIG: 'stockflow_sheet_config_v1',
 };
 
@@ -161,7 +175,7 @@ const DEFAULT_SPREADSHEET_CONFIG: SpreadsheetConfig = {
 
 export default function App() {
   // Navigation State
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'master' | 'history' | 'reports' | 'customers' | 'suppliers'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'master' | 'history' | 'reports' | 'customers' | 'suppliers' | 'accounts'>('dashboard');
   const [historyFilter, setHistoryFilter] = useState<'ALL' | 'IN' | 'OUT'>('ALL');
 
   // Inventory State with localStorage persistence and fallback to seed
@@ -207,6 +221,26 @@ export default function App() {
     return [...SALES_PERSONS];
   });
 
+  const [accounts, setAccounts] = useState<UserAccount[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.ACCOUNTS);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Failed to load accounts from storage:', e);
+    }
+    return INITIAL_ACCOUNTS;
+  });
+
+  const [activeUser, setActiveUser] = useState<UserAccount | null>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_USER);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Failed to load active user from storage:', e);
+    }
+    return null;
+  });
+
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
@@ -244,6 +278,7 @@ export default function App() {
   const [isFetchingCustomers, setIsFetchingCustomers] = useState<boolean>(false);
   const [isFetchingSuppliers, setIsFetchingSuppliers] = useState<boolean>(false);
   const [isFetchingTransactions, setIsFetchingTransactions] = useState<boolean>(false);
+  const [isFetchingAccounts, setIsFetchingAccounts] = useState<boolean>(false);
 
   // Modals State
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
@@ -251,6 +286,14 @@ export default function App() {
   const [preselectedItemId, setPreselectedItemId] = useState<string | undefined>(undefined);
   const [preselectedRecipient, setPreselectedRecipient] = useState<string>('');
   const [spreadsheetModalOpen, setSpreadsheetModalOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_USER);
+      return !saved;
+    } catch {
+      return true;
+    }
+  });
 
   // Destructive Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -304,6 +347,18 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SALES, JSON.stringify(salesPersons));
   }, [salesPersons]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.ACCOUNTS, JSON.stringify(accounts));
+  }, [accounts]);
+
+  useEffect(() => {
+    if (activeUser) {
+      localStorage.setItem(STORAGE_KEYS.ACTIVE_USER, JSON.stringify(activeUser));
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.ACTIVE_USER);
+    }
+  }, [activeUser]);
 
   useEffect(() => {
     if (spreadsheetConfig) {
@@ -388,6 +443,24 @@ export default function App() {
         } catch (err) {
           console.warn('Initial sales sync notice:', err);
         }
+
+        // 6. User Accounts ("AKUN")
+        try {
+          const resAccounts = await fetchAccountsFromSheet(token, id);
+          if (!isCancelled && resAccounts.accounts && resAccounts.accounts.length > 0) {
+            setAccounts(resAccounts.accounts);
+            // Sync activeUser if still present
+            setActiveUser((prevActive) => {
+              if (!prevActive) return resAccounts.accounts[0] || null;
+              const matched = resAccounts.accounts.find(
+                (a) => a.id === prevActive.id || a.username === prevActive.username
+              );
+              return matched || prevActive;
+            });
+          }
+        } catch (err) {
+          console.warn('Initial accounts sync notice:', err);
+        }
       } catch (err) {
         console.warn('Initial background sync error:', err);
       }
@@ -401,7 +474,7 @@ export default function App() {
   // Summary Metrics
   const summary = calculateStockSummary(items, transactions);
 
-  // Login Handler with auto-sync to the target spreadsheet
+  // Login Handler with auto-sync and auto-fetch from Google Sheets
   const handleLogin = async () => {
     try {
       const result = await googleSignIn();
@@ -409,27 +482,30 @@ export default function App() {
         setUser(result.user);
         showToast('success', `Berhasil masuk sebagai ${result.user.displayName || result.user.email}`);
 
-        // Automatically sync all data to the target spreadsheet
+        // Automatically fetch latest data from respective sheets upon login
         setIsSyncing(true);
         try {
-          const res = await syncFullDataToSheet(
-            result.accessToken,
-            spreadsheetConfig.spreadsheetId,
-            items,
-            transactions,
-            customers,
-            suppliers,
-            salesPersons
-          );
-          if (res.success) {
-            setSpreadsheetConfig((prev) => ({
-              ...prev,
-              lastSyncedAt: new Date().toLocaleTimeString('id-ID'),
-            }));
-            showToast('success', 'Semua data produk & inventaris berhasil tersimpan ke Google Sheets!');
-          }
-        } catch (syncErr: any) {
-          console.warn('Initial sync notice on login:', syncErr);
+          const token = result.accessToken;
+          const id = spreadsheetConfig.spreadsheetId;
+          const [resItems, resCust, resSupp, resTxs, resSales, resAccounts] = await Promise.all([
+            fetchStockListFromSheet(token, id).catch(() => ({ items: [], count: 0 })),
+            fetchCustomersFromSheet(token, id).catch(() => ({ customers: [], count: 0 })),
+            fetchSuppliersFromSheet(token, id).catch(() => ({ suppliers: [], count: 0 })),
+            fetchTransactionsFromSheets(token, id).catch(() => ({ transactions: [], count: 0 })),
+            fetchSalesFromSheet(token, id).catch(() => []),
+            fetchAccountsFromSheet(token, id).catch(() => ({ accounts: [], count: 0 })),
+          ]);
+
+          if (resItems.items.length > 0) setItems(resItems.items);
+          if (resCust.customers.length > 0) setCustomers(resCust.customers);
+          if (resSupp.suppliers.length > 0) setSuppliers(resSupp.suppliers);
+          if (resTxs.transactions.length > 0) setTransactions(resTxs.transactions);
+          if (resSales.length > 0) setSalesPersons(resSales);
+          if (resAccounts.accounts.length > 0) setAccounts(resAccounts.accounts);
+
+          showToast('success', 'Data aplikasi berhasil disinkronkan otomatis dari Google Spreadsheet!');
+        } catch (fetchErr: any) {
+          console.warn('Auto fetch on login notice:', fetchErr);
         } finally {
           setIsSyncing(false);
         }
@@ -484,7 +560,8 @@ export default function App() {
         transactions,
         customers,
         suppliers,
-        salesPersons
+        salesPersons,
+        accounts
       );
       if (res.success) {
         const updatedConfig = {
@@ -501,6 +578,107 @@ export default function App() {
     } finally {
       setIsSyncing(false);
     }
+  };
+
+  // Fetch Accounts directly from sheet "AKUN"
+  const handleFetchAccountsFromSheet = async () => {
+    setIsFetchingAccounts(true);
+    try {
+      const token = await getAccessToken();
+      const res = await fetchAccountsFromSheet(token, spreadsheetConfig.spreadsheetId);
+      if (res.accounts.length > 0) {
+        setAccounts(res.accounts);
+        showToast(
+          'success',
+          `Berhasil mengambil ${res.count} data akun langsung dari sheet "${res.sheetTitle}"!`
+        );
+      } else {
+        showToast(
+          'info',
+          `Sheet "${res.sheetTitle}" ditemukan. Belum ada baris akun baru.`
+        );
+      }
+    } catch (err: any) {
+      console.error('Fetch accounts error:', err);
+      showToast('error', err.message || 'Gagal mengambil data akun dari sheet.');
+    } finally {
+      setIsFetchingAccounts(false);
+    }
+  };
+
+  // Account Handlers (Otomatis masuk ke sheet "AKUN")
+  const handleAddAccount = (newAcc: UserAccount) => {
+    const updated = [newAcc, ...accounts];
+    setAccounts(updated);
+    showToast('success', `Akun [${newAcc.username}] (${newAcc.name}) berhasil ditambahkan.`);
+    autoSyncMutationToSheets('ACCOUNT', {
+      newAccounts: updated,
+      singleAccount: newAcc,
+    });
+  };
+
+  const handleUpdateAccount = (updatedAcc: UserAccount) => {
+    const updated = accounts.map((a) => (a.id === updatedAcc.id ? updatedAcc : a));
+    setAccounts(updated);
+    // If activeUser is updated, update activeUser as well
+    if (activeUser && activeUser.id === updatedAcc.id) {
+      setActiveUser(updatedAcc);
+    }
+    showToast('success', `Data akun [${updatedAcc.username}] berhasil diperbarui.`);
+    autoSyncMutationToSheets('ACCOUNT', {
+      newAccounts: updated,
+      singleAccount: updatedAcc,
+    });
+  };
+
+  const handleDeleteAccount = (accId: string) => {
+    const target = accounts.find((a) => a.id === accId);
+    if (!target) return;
+    if (accounts.length <= 1) {
+      showToast('error', 'Tidak dapat menghapus seluruh akun. Sisakan minimal 1 akun aktif.');
+      return;
+    }
+    setConfirmModal({
+      isOpen: true,
+      title: `Hapus Akun '${target.username}'?`,
+      message: `Apakah Anda yakin ingin menghapus akun [${target.username}] ${target.name}? Pengguna ini tidak akan dapat login kembali.`,
+      confirmLabel: 'Ya, Hapus Akun',
+      isDestructive: true,
+      onConfirm: () => {
+        const remaining = accounts.filter((a) => a.id !== accId);
+        setAccounts(remaining);
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        showToast('info', `Akun [${target.username}] telah dihapus.`);
+        autoSyncMutationToSheets('ACCOUNT', {
+          newAccounts: remaining,
+        });
+      },
+    });
+  };
+
+  const handleLoginAccount = (acc: UserAccount) => {
+    setActiveUser(acc);
+    // Update lastLogin on account
+    const updatedTime = new Date().toISOString().replace('T', ' ').slice(0, 16);
+    const updatedAcc = { ...acc, lastLogin: updatedTime };
+    setAccounts((prev) => prev.map((a) => (a.id === acc.id ? updatedAcc : a)));
+    showToast('success', `Berhasil Masuk sebagai ${acc.name} (${acc.role})!`);
+  };
+
+  const handleLogoutAccount = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Keluar dari Akun Pengguna',
+      message: 'Apakah Anda ingin keluar dari akun saat ini?',
+      confirmLabel: 'Ya, Keluar Akun',
+      isDestructive: false,
+      onConfirm: () => {
+        setActiveUser(null);
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        showToast('info', 'Anda telah keluar dari akun pengguna.');
+        setLoginModalOpen(true);
+      },
+    });
   };
 
   // Fetch / Import Stock List from sheet " STOCK LIST"
@@ -665,18 +843,20 @@ export default function App() {
   // - Item            -> Sheet "STOCK LIST"
   // - Sales           -> Sheet "SALES"
   const autoSyncMutationToSheets = async (
-    actionType: 'TRANSACTION' | 'ITEM' | 'CUSTOMER' | 'SUPPLIER' | 'SALES',
+    actionType: 'TRANSACTION' | 'ITEM' | 'CUSTOMER' | 'SUPPLIER' | 'SALES' | 'ACCOUNT',
     payload: {
       newItems?: Item[];
       newTransactions?: Transaction[];
       newCustomers?: Customer[];
       newSuppliers?: Supplier[];
       newSalesPersons?: string[];
+      newAccounts?: UserAccount[];
       singleTx?: Transaction;
       singleCust?: Customer;
       singleSupp?: Supplier;
       singleItem?: Item;
       singleSales?: string;
+      singleAccount?: UserAccount;
     }
   ) => {
     const spreadsheetId = spreadsheetConfig?.spreadsheetId || TARGET_SPREADSHEET_ID;
@@ -704,6 +884,8 @@ export default function App() {
         await appendItemToSheet(token, spreadsheetId, payload.singleItem);
       } else if (actionType === 'SALES' && payload.singleSales) {
         await appendSalesToSheet(token, spreadsheetId, payload.singleSales);
+      } else if (actionType === 'ACCOUNT' && payload.singleAccount) {
+        await appendAccountToSheet(token, spreadsheetId, payload.singleAccount);
       }
 
       // 2. Full synchronization across all sheets
@@ -714,7 +896,8 @@ export default function App() {
         payload.newTransactions || transactions,
         payload.newCustomers || customers,
         payload.newSuppliers || suppliers,
-        payload.newSalesPersons || salesPersons
+        payload.newSalesPersons || salesPersons,
+        payload.newAccounts || accounts
       );
 
       if (res.success) {
@@ -734,7 +917,9 @@ export default function App() {
             ? 'DATABASE SUPPLIER'
             : actionType === 'ITEM'
             ? 'STOCK LIST'
-            : 'SALES';
+            : actionType === 'SALES'
+            ? 'SALES'
+            : 'AKUN';
 
         showToast('success', `Otomatis tersimpan ke spreadsheet: sheet "${targetSheetLabel}"!`);
       }
@@ -1312,12 +1497,15 @@ export default function App() {
         historyFilter={historyFilter}
         setHistoryFilter={setHistoryFilter}
         user={user}
+        activeUser={activeUser}
         spreadsheetConfig={spreadsheetConfig}
         isSyncing={isSyncing}
         onOpenSpreadsheetModal={() => setSpreadsheetModalOpen(true)}
+        onOpenLoginModal={() => setLoginModalOpen(true)}
         onQuickSync={handleFullSync}
         onLogin={handleLogin}
         onLogout={handleLogout}
+        onLogoutAccount={handleLogoutAccount}
       />
 
       {/* Main Content Wrapper */}
@@ -1355,32 +1543,6 @@ export default function App() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <button
-                onClick={handleFetchFromStockListSheet}
-                disabled={isFetchingFromSheets}
-                className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/25 transition-all cursor-pointer disabled:bg-slate-700"
-                title="Ambil dan sinkronkan data barang langsung dari sheet 'STOCK LIST'"
-              >
-                <Download className={`w-4 h-4 ${isFetchingFromSheets ? 'animate-bounce' : ''}`} />
-                <span>{isFetchingFromSheets ? 'Mengambil...' : "Tarik 'STOCK LIST'"}</span>
-              </button>
-              <button
-                onClick={handleFetchAllFromSheets}
-                disabled={isFetchingFromSheets}
-                className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer border border-slate-700 disabled:bg-slate-700"
-                title="Tarik seluruh data: Stock List, Database Customer, Database Supplier, History Pembelian & Penjualan, dan Tim Sales"
-              >
-                <RefreshCw className={`w-4 h-4 ${isFetchingFromSheets ? 'animate-spin' : ''}`} />
-                <span>Tarik Semua Sheets</span>
-              </button>
-              <button
-                onClick={handleFullSync}
-                disabled={isSyncing}
-                className="flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-emerald-500/25 transition-all cursor-pointer disabled:bg-slate-700"
-              >
-                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span>{isSyncing ? 'Menyimpan...' : 'Simpan ke Google Sheets'}</span>
-              </button>
               <a
                 href={spreadsheetConfig?.spreadsheetUrl || TARGET_SPREADSHEET_URL}
                 target="_blank"
@@ -1476,6 +1638,18 @@ export default function App() {
             summary={summary}
           />
         )}
+
+        {activeTab === 'accounts' && (
+          <AccountsView
+            accounts={accounts}
+            activeUser={activeUser}
+            onAddAccount={handleAddAccount}
+            onUpdateAccount={handleUpdateAccount}
+            onDeleteAccount={handleDeleteAccount}
+            onRefreshFromSheet={handleFetchAccountsFromSheet}
+            isSyncing={isSyncing || isFetchingAccounts}
+          />
+        )}
       </main>
 
       {/* Footer */}
@@ -1503,9 +1677,22 @@ export default function App() {
         defaultType={txModalType}
         preselectedItemId={preselectedItemId}
         initialRecipient={preselectedRecipient}
-        defaultOperator={user?.displayName || 'Petugas Gudang'}
+        defaultOperator={activeUser?.name || user?.displayName || 'Petugas Gudang'}
         onSubmit={handleTransactionSubmit}
         onSubmitBatch={handleBatchTransactionSubmit}
+      />
+
+      {/* Login Account Modal (Sheet AKUN) */}
+      <LoginModal
+        isOpen={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        accounts={accounts}
+        activeUser={activeUser}
+        onLoginAccount={handleLoginAccount}
+        onLoginGoogle={handleLogin}
+        onRefreshAccountsFromSheet={handleFetchAccountsFromSheet}
+        isSyncingAccounts={isFetchingAccounts}
+        googleUserEmail={user?.email}
       />
 
       {/* Google Sheets Sync Hub Modal */}

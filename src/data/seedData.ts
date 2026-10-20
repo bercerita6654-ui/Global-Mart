@@ -1,4 +1,4 @@
-import { Item, Transaction, Customer, Supplier } from '../types/inventory.js';
+import { Item, Transaction, Customer, Supplier, UserAccount } from '../types/inventory.js';
 
 export const INITIAL_ITEMS: Item[] = [
   {
@@ -606,6 +606,69 @@ export const INITIAL_SUPPLIERS: Supplier[] = [
     notes: 'Produsen kardus packaging, box karton, dan plastik wrapping',
     createdAt: '2026-10-08T11:45:00Z',
     lastUpdated: '2026-10-16T13:20:00Z',
+  },
+];
+
+export const INITIAL_ACCOUNTS: UserAccount[] = [
+  {
+    id: 'USR-001',
+    username: 'admin',
+    password: 'admin123',
+    name: 'Admin Utama',
+    role: 'Admin',
+    email: 'admin@globalmart.id',
+    phone: '081234567890',
+    status: 'Aktif',
+    lastLogin: '2026-10-20 08:00',
+    notes: 'Super Admin Sistem Gudang & Penjualan (Full Akses)',
+  },
+  {
+    id: 'USR-002',
+    username: 'gudang',
+    password: 'gudang123',
+    name: 'Petugas Gudang',
+    role: 'Petugas Gudang',
+    email: 'gudang@globalmart.id',
+    phone: '081298765432',
+    status: 'Aktif',
+    lastLogin: '2026-10-20 07:30',
+    notes: 'Petugas Penerimaan Barang Masuk & Penataan Stok Rak',
+  },
+  {
+    id: 'USR-003',
+    username: 'kasir',
+    password: 'kasir123',
+    name: 'Kasir Toko',
+    role: 'Kasir',
+    email: 'kasir@globalmart.id',
+    phone: '081311223344',
+    status: 'Aktif',
+    lastLogin: '2026-10-20 07:45',
+    notes: 'Kasir Transaksi Penjualan Multi-SKU & Cetak Nota',
+  },
+  {
+    id: 'USR-004',
+    username: 'spv',
+    password: 'spv123',
+    name: 'Supervisor Operasional',
+    role: 'Supervisor',
+    email: 'spv@globalmart.id',
+    phone: '081399887766',
+    status: 'Aktif',
+    lastLogin: '2026-10-19 16:20',
+    notes: 'Supervisor Logistik, Audit Stok & Ringkasan Laporan',
+  },
+  {
+    id: 'USR-005',
+    username: 'sales',
+    password: 'sales123',
+    name: 'Jefri Budi Santoso',
+    role: 'Sales',
+    email: 'jefri@globalmart.id',
+    phone: '081277665544',
+    status: 'Aktif',
+    lastLogin: '2026-10-19 14:10',
+    notes: 'Tim Sales Penanggung Jawab Order & Mitra Customer',
   },
 ];
 

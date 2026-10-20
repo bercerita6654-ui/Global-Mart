@@ -14,22 +14,26 @@ import {
   ArrowUpRight,
   ChevronDown,
   Truck,
+  ShieldCheck,
 } from 'lucide-react';
 import type { User } from 'firebase/auth';
-import type { SpreadsheetConfig } from '../types/inventory.js';
+import type { SpreadsheetConfig, UserAccount } from '../types/inventory.js';
 
 interface SidebarProps {
-  activeTab: 'dashboard' | 'master' | 'history' | 'reports' | 'customers' | 'suppliers';
-  setActiveTab: (tab: 'dashboard' | 'master' | 'history' | 'reports' | 'customers' | 'suppliers') => void;
+  activeTab: 'dashboard' | 'master' | 'history' | 'reports' | 'customers' | 'suppliers' | 'accounts';
+  setActiveTab: (tab: 'dashboard' | 'master' | 'history' | 'reports' | 'customers' | 'suppliers' | 'accounts') => void;
   historyFilter?: 'ALL' | 'IN' | 'OUT';
   setHistoryFilter?: (filter: 'ALL' | 'IN' | 'OUT') => void;
   user: User | null;
+  activeUser?: UserAccount | null;
   spreadsheetConfig: SpreadsheetConfig | null;
   isSyncing: boolean;
   onOpenSpreadsheetModal: () => void;
+  onOpenLoginModal?: () => void;
   onQuickSync: () => void;
   onLogin: () => void;
   onLogout: () => void;
+  onLogoutAccount?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -38,12 +42,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
   historyFilter = 'ALL',
   setHistoryFilter,
   user,
+  activeUser,
   spreadsheetConfig,
   isSyncing,
   onOpenSpreadsheetModal,
+  onOpenLoginModal,
   onQuickSync,
   onLogin,
   onLogout,
+  onLogoutAccount,
 }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -52,6 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'suppliers', label: 'Database Supplier', icon: Truck },
     { id: 'history', label: 'Riwayat Mutasi', icon: FileSpreadsheet },
     { id: 'reports', label: 'Laporan', icon: BarChart3 },
+    { id: 'accounts', label: 'Database Akun', icon: ShieldCheck },
   ] as const;
 
   return (
@@ -220,34 +228,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
 
-      {/* User Account Footer Section */}
-      <div className="p-4 border-t border-slate-800 bg-slate-950/40">
-        {user ? (
+      {/* User Account Footer Section (Sheet AKUN & Google) */}
+      <div className="p-4 border-t border-slate-800 bg-slate-950/40 space-y-2">
+        {activeUser ? (
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2.5 overflow-hidden">
-              {user.photoURL ? (
-                <img
-                  src={user.photoURL}
-                  alt={user.displayName || 'Pengguna'}
-                  className="w-8 h-8 rounded-full border border-slate-700 shrink-0"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                  {(user.displayName || user.email || 'U')[0].toUpperCase()}
-                </div>
-              )}
+              <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shadow-xs shrink-0">
+                {activeUser.name.charAt(0).toUpperCase()}
+              </div>
               <div className="overflow-hidden text-left text-xs">
-                <p className="font-bold text-white truncate leading-tight">
-                  {user.displayName || 'Akun Google'}
-                </p>
-                <p className="text-[10px] text-slate-400 truncate">{user.email}</p>
+                <div className="flex items-center space-x-1.5">
+                  <p className="font-bold text-white truncate leading-tight">
+                    {activeUser.name}
+                  </p>
+                </div>
+                <div className="flex items-center space-x-1 mt-0.5">
+                  <span className="text-[10px] text-slate-400 font-mono truncate">
+                    @{activeUser.username}
+                  </span>
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-extrabold border border-emerald-500/30 uppercase">
+                    {activeUser.role}
+                  </span>
+                </div>
               </div>
             </div>
             <button
               type="button"
-              onClick={onLogout}
-              title="Keluar"
-              className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-colors shrink-0"
+              onClick={onLogoutAccount}
+              title="Ganti / Keluar Akun Pengguna"
+              className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-colors shrink-0 cursor-pointer"
             >
               <LogOut className="w-4 h-4" />
             </button>
@@ -255,28 +264,43 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <button
             type="button"
-            onClick={onLogin}
-            className="w-full flex items-center justify-center space-x-2 bg-white hover:bg-slate-100 text-slate-900 py-2.5 px-3 rounded-xl text-xs font-bold shadow-md transition-all"
+            onClick={onOpenLoginModal}
+            className="w-full flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-500 text-white py-2.5 px-3 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
           >
-            <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-              />
+            <ShieldCheck className="w-4 h-4 shrink-0" />
+            <span>Masuk Akun (Sheet AKUN)</span>
+          </button>
+        )}
+
+        {/* Google Sync Status */}
+        {user ? (
+          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+            <span className="flex items-center space-x-1.5 truncate">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+              <span className="truncate" title={user.email || ''}>Sheets: {user.email?.split('@')[0]}</span>
+            </span>
+            <button
+              type="button"
+              onClick={onLogout}
+              className="text-slate-500 hover:text-slate-300 text-[10px]"
+              title="Putus Google Auth"
+            >
+              Putus
+            </button>
+          </div>
+        ) : onLogin && (
+          <button
+            type="button"
+            onClick={onLogin}
+            className="w-full flex items-center justify-center space-x-1.5 bg-slate-800/80 hover:bg-slate-800 text-slate-300 py-1.5 px-2.5 rounded-lg text-[11px] font-semibold transition-colors"
+          >
+            <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
+              <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
             </svg>
-            <span>Masuk Google</span>
+            <span>Hubungkan Google</span>
           </button>
         )}
       </div>

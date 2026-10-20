@@ -15,6 +15,21 @@ export const SALES_REPRESENTATIVES = [
 
 export const SALES_PERSONS = SALES_REPRESENTATIVES;
 
+export type UserRole = 'Admin' | 'Supervisor' | 'Petugas Gudang' | 'Kasir' | 'Sales';
+
+export interface UserAccount {
+  id: string; // ID Pengguna, misal USR-001
+  username: string; // Username untuk login
+  password?: string; // Password atau PIN akun
+  name: string; // Nama Lengkap Pengguna
+  role: UserRole; // Role / Jabatan
+  email?: string; // Email pengguna
+  phone?: string; // No WhatsApp / Telepon
+  status: 'Aktif' | 'Nonaktif'; // Status Akun
+  lastLogin?: string; // Tanggal / waktu login terakhir
+  notes?: string; // Catatan tambahan
+}
+
 export type SalesPerson = (typeof SALES_REPRESENTATIVES)[number];
 
 export interface Customer {

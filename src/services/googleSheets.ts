@@ -3,6 +3,8 @@ import {
   Transaction,
   Customer,
   Supplier,
+  UserAccount,
+  UserRole,
   TARGET_SPREADSHEET_ID,
   TARGET_SPREADSHEET_URL,
 } from '../types/inventory.js';
@@ -17,6 +19,7 @@ import {
   HISTORY_PEMBELIAN_HEADERS,
   HISTORY_PENJUALAN_HEADERS,
   SALES_SHEET_HEADERS,
+  AKUN_SHEET_HEADERS,
   itemToSheetRow,
   transactionToSheetRow,
   customerToSheetRow,
@@ -25,6 +28,7 @@ import {
   supplierToDatabaseSupplierRow,
   transactionToHistoryPembelianRow,
   transactionToHistoryPenjualanRow,
+  userAccountToRow,
   summaryToSheetRows,
   calculateStockSummary,
   calculateTierPrices,
@@ -1033,6 +1037,137 @@ export async function fetchSalesFromSheet(
 }
 
 /**
+ * Parses rows from sheet "AKUN" into UserAccount[]
+ */
+export function parseRowsToUserAccounts(headers: string[], rows: any[][]): UserAccount[] {
+  const findCol = (regex: RegExp) =>
+    headers.findIndex((h) => regex.test(String(h || '').trim().toLowerCase()));
+
+  const hIdCol = findCol(/^id\b|id.*pengguna|id.*user|kode.*user/i);
+  const hUserCol = findCol(/^username\b|nama.*pengguna|user.*name|^akun\b/i);
+  const hPassCol = findCol(/password|kata.*sandi|^pin\b|pass/i);
+  const hNameCol = findCol(/nama.*lengkap|^nama\b|full.*name/i);
+  const hRoleCol = findCol(/role|jabatan|hak.*akses|level/i);
+  const hEmailCol = findCol(/email|surel/i);
+  const hPhoneCol = findCol(/wa|whatsapp|telepon|hp|phone|kontak/i);
+  const hStatusCol = findCol(/status|aktif/i);
+  const hLastLoginCol = findCol(/login|terakhir/i);
+  const hNotesCol = findCol(/catatan|keterangan|notes/i);
+
+  const accounts: UserAccount[] = [];
+
+  rows.forEach((row, idx) => {
+    if (!row || row.length === 0) return;
+
+    const rawFirst = String(row[0] || '').trim();
+    if (!rawFirst || rawFirst.toUpperCase().includes('ID PENGGUNA') || rawFirst.toUpperCase().includes('USERNAME')) return;
+
+    let id = hIdCol !== -1 && row[hIdCol] ? String(row[hIdCol]).trim() : `USR-${String(idx + 1).padStart(3, '0')}`;
+    let username = hUserCol !== -1 && row[hUserCol] ? String(row[hUserCol]).trim() : '';
+    let password = row[2] !== undefined && row[2] !== null && String(row[2]).trim() !== '' 
+      ? String(row[2]).trim() 
+      : hPassCol !== -1 && row[hPassCol] 
+      ? String(row[hPassCol]).trim() 
+      : '';
+    let name = hNameCol !== -1 && row[hNameCol] ? String(row[hNameCol]).trim() : '';
+    let roleStr = hRoleCol !== -1 && row[hRoleCol] ? String(row[hRoleCol]).trim() : 'Petugas Gudang';
+    let email = hEmailCol !== -1 && row[hEmailCol] ? String(row[hEmailCol]).trim() : undefined;
+    let phone = hPhoneCol !== -1 && row[hPhoneCol] ? String(row[hPhoneCol]).trim() : undefined;
+    let statusStr = hStatusCol !== -1 && row[hStatusCol] ? String(row[hStatusCol]).trim() : 'Aktif';
+    let lastLogin = hLastLoginCol !== -1 && row[hLastLoginCol] ? String(row[hLastLoginCol]).trim() : undefined;
+    let notes = hNotesCol !== -1 && row[hNotesCol] ? String(row[hNotesCol]).trim() : undefined;
+
+    // Fallback based on column index (0: ID, 1: Username, 2: Password, 3: Name, etc.)
+    if (!username && row[1]) username = String(row[1]).trim();
+    if (!password && row[2]) password = String(row[2]).trim();
+    if (!name && row[3]) name = String(row[3]).trim();
+    if (!name && username) name = username;
+    if (!username && name) username = name.toLowerCase().replace(/\s+/g, '');
+
+    // Skip empty row
+    if (!username && !name) return;
+
+    // Validate role
+    let role: UserRole = 'Petugas Gudang';
+    const rLower = roleStr.toLowerCase();
+    if (rLower.includes('admin')) role = 'Admin';
+    else if (rLower.includes('spv') || rLower.includes('supervis')) role = 'Supervisor';
+    else if (rLower.includes('kasir')) role = 'Kasir';
+    else if (rLower.includes('sales')) role = 'Sales';
+    else role = 'Petugas Gudang';
+
+    const status: 'Aktif' | 'Nonaktif' = statusStr.toLowerCase().includes('non') ? 'Nonaktif' : 'Aktif';
+
+    accounts.push({
+      id: id || `USR-${String(idx + 1).padStart(3, '0')}`,
+      username: username || `user${idx + 1}`,
+      password: password && password !== '-' ? password : '123',
+      name: name || username,
+      role,
+      email: email && email !== '-' ? email : undefined,
+      phone: phone && phone !== '-' ? phone : undefined,
+      status,
+      lastLogin: lastLogin && lastLogin !== '-' ? lastLogin : undefined,
+      notes: notes && notes !== '-' ? notes : undefined,
+    });
+  });
+
+  return accounts;
+}
+
+/**
+ * Fetches user accounts directly from sheet "AKUN"
+ */
+export async function fetchAccountsFromSheet(
+  accessToken: string | null | undefined,
+  spreadsheetId: string
+): Promise<{ accounts: UserAccount[]; sheetTitle: string; count: number }> {
+  const candidateNames = ['AKUN', 'Akun', 'DATA_AKUN', 'USERS', 'USER', 'PENGGUNA'];
+  const grid = await fetchSheetGridData(accessToken, spreadsheetId, candidateNames);
+  if (grid && grid.dataRows.length > 0) {
+    const accounts = parseRowsToUserAccounts(grid.headers, grid.dataRows);
+    return {
+      accounts,
+      sheetTitle: grid.sheetTitle,
+      count: accounts.length,
+    };
+  }
+  return { accounts: [], sheetTitle: 'AKUN', count: 0 };
+}
+
+/**
+ * Appends a new single user account row to sheet "AKUN"
+ */
+export async function appendAccountToSheet(
+  accessToken: string,
+  spreadsheetId: string,
+  account: UserAccount
+): Promise<boolean> {
+  const targetRow = userAccountToRow(account);
+  try {
+    const res = await fetch(
+      `${SHEETS_API_BASE}/${spreadsheetId}/values/'${encodeURIComponent(
+        'AKUN'
+      )}'!A:J:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          values: [targetRow],
+        }),
+      }
+    );
+    return res.ok;
+  } catch (err) {
+    console.warn('Failed to append account to AKUN:', err);
+    return false;
+  }
+}
+
+/**
  * Fetches the stock list directly from the sheet named " STOCK LIST" (or "STOCK LIST")
  */
 /**
@@ -1209,6 +1344,7 @@ export async function ensureSpreadsheetTabs(
     'HISTORY PEMBELIAN',
     'HISTORY PENJUALAN',
     'SALES',
+    'AKUN',
     'MUTASI_TRANSAKSI',
     'RINGKASAN_GUDANG',
   ];
@@ -1343,6 +1479,12 @@ export async function createInventorySpreadsheet(
       {
         properties: {
           title: 'SALES',
+          gridProperties: { frozenRowCount: 1 },
+        },
+      },
+      {
+        properties: {
+          title: 'AKUN',
           gridProperties: { frozenRowCount: 1 },
         },
       },
@@ -1597,7 +1739,8 @@ export async function syncFullDataToSheet(
   transactions: Transaction[],
   customers: Customer[] = [],
   suppliers: Supplier[] = [],
-  salesPersons: string[] = []
+  salesPersons: string[] = [],
+  accounts: UserAccount[] = []
 ): Promise<SyncResult> {
   try {
     // 1. Ensure tabs exist and identify exact stock sheet title (e.g. " STOCK LIST")
@@ -1623,6 +1766,10 @@ export async function syncFullDataToSheet(
       SALES_SHEET_HEADERS,
       ...salesPersons.map((name) => [name]),
     ];
+    const accountRows = [
+      AKUN_SHEET_HEADERS,
+      ...accounts.map(userAccountToRow),
+    ];
     const summaryRows = [
       SUMMARY_SHEET_HEADERS,
       ...summaryToSheetRows(summary, items.length, customers.length, suppliers.length),
@@ -1636,6 +1783,7 @@ export async function syncFullDataToSheet(
       `'HISTORY PEMBELIAN'!A1:Z`,
       `'HISTORY PENJUALAN'!A1:Z`,
       `'SALES'!A1:Z`,
+      `'AKUN'!A1:Z`,
       'MUTASI_TRANSAKSI!A1:Z',
       'RINGKASAN_GUDANG!A1:Z',
     ];
@@ -1685,6 +1833,10 @@ export async function syncFullDataToSheet(
         values: salesRows,
       },
       {
+        range: `'AKUN'!A1`,
+        values: accountRows,
+      },
+      {
         range: 'MUTASI_TRANSAKSI!A1',
         values: txRows,
       },
@@ -1728,7 +1880,7 @@ export async function syncFullDataToSheet(
 
     return {
       success: true,
-      message: `Semua data (${items.length} produk di "${stockSheetTitle}", ${customers.length} customer di "DATABASE CUSTOMER", ${suppliers.length} supplier di "DATABASE SUPPLIER", ${inTxs.length} pembelian di "HISTORY PEMBELIAN", ${outTxs.length} penjualan di "HISTORY PENJUALAN", ${salesPersons.length} sales di "SALES") berhasil tersimpan ke Google Sheets!`,
+      message: `Semua data (${items.length} produk di "${stockSheetTitle}", ${customers.length} customer di "DATABASE CUSTOMER", ${suppliers.length} supplier di "DATABASE SUPPLIER", ${inTxs.length} pembelian di "HISTORY PEMBELIAN", ${outTxs.length} penjualan di "HISTORY PENJUALAN", ${salesPersons.length} sales di "SALES", ${accounts.length} akun di "AKUN") berhasil tersimpan ke Google Sheets!`,
       updatedAt: new Date().toLocaleTimeString('id-ID'),
       spreadsheetUrl,
     };

@@ -13,22 +13,27 @@ import {
   CheckCircle2,
   AlertCircle,
   Users,
+  ShieldCheck,
+  UserCheck,
 } from 'lucide-react';
 import type { User } from 'firebase/auth';
-import type { SpreadsheetConfig } from '../types/inventory.js';
+import type { SpreadsheetConfig, UserAccount } from '../types/inventory.js';
 
 interface NavbarProps {
-  activeTab: 'dashboard' | 'master' | 'history' | 'reports' | 'customers';
-  setActiveTab: (tab: 'dashboard' | 'master' | 'history' | 'reports' | 'customers') => void;
+  activeTab: 'dashboard' | 'master' | 'history' | 'reports' | 'customers' | 'suppliers' | 'accounts';
+  setActiveTab: (tab: 'dashboard' | 'master' | 'history' | 'reports' | 'customers' | 'suppliers' | 'accounts') => void;
   historyFilter?: 'ALL' | 'IN' | 'OUT';
   setHistoryFilter?: (filter: 'ALL' | 'IN' | 'OUT') => void;
   user: User | null;
+  activeUser?: UserAccount | null;
   spreadsheetConfig: SpreadsheetConfig | null;
   isSyncing: boolean;
   onOpenSpreadsheetModal: () => void;
+  onOpenLoginModal?: () => void;
   onQuickSync: () => void;
   onLogin: () => void;
   onLogout: () => void;
+  onLogoutAccount?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -37,12 +42,15 @@ export const Navbar: React.FC<NavbarProps> = ({
   historyFilter = 'ALL',
   setHistoryFilter,
   user,
+  activeUser,
   spreadsheetConfig,
   isSyncing,
   onOpenSpreadsheetModal,
+  onOpenLoginModal,
   onQuickSync,
   onLogin,
   onLogout,
+  onLogoutAccount,
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200">
@@ -169,31 +177,40 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {/* Google Auth Status / Button */}
-            {user ? (
-              <div className="flex items-center space-x-2 border-l border-slate-200 pl-3">
-                {user.photoURL ? (
-                  <img
-                    src={user.photoURL}
-                    alt={user.displayName || 'Pengguna'}
-                    className="w-7 h-7 rounded-full border border-slate-300"
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-bold">
-                    {(user.displayName || user.email || 'U')[0].toUpperCase()}
-                  </div>
-                )}
+            {/* Active User Account from Sheet AKUN */}
+            {activeUser ? (
+              <div className="flex items-center space-x-2 border-l border-slate-200 pl-2 sm:pl-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shadow-xs shrink-0">
+                  {activeUser.name.charAt(0).toUpperCase()}
+                </div>
                 <div className="hidden lg:block text-left text-xs">
-                  <p className="font-semibold text-slate-800 leading-tight truncate max-w-[100px]">
-                    {user.displayName || 'Akun Google'}
+                  <div className="flex items-center space-x-1.5">
+                    <p className="font-extrabold text-slate-900 leading-tight truncate max-w-[110px]">
+                      {activeUser.name}
+                    </p>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.5 rounded font-black border uppercase ${
+                        activeUser.role === 'Admin'
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                          : activeUser.role === 'Kasir'
+                          ? 'bg-purple-50 text-purple-800 border-purple-300'
+                          : activeUser.role === 'Supervisor'
+                          ? 'bg-blue-50 text-blue-800 border-blue-300'
+                          : 'bg-amber-50 text-amber-800 border-amber-300'
+                      }`}
+                    >
+                      {activeUser.role}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-mono truncate max-w-[110px]">
+                    @{activeUser.username}
                   </p>
-                  <p className="text-[10px] text-slate-600 truncate max-w-[100px]">{user.email}</p>
                 </div>
                 <button
                   type="button"
-                  onClick={onLogout}
-                  title="Keluar / Ganti Akun"
-                  className="p-1.5 text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                  onClick={onLogoutAccount}
+                  title="Ganti / Keluar Akun Pengguna"
+                  className="p-1.5 text-slate-500 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
@@ -201,29 +218,34 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <button
                 type="button"
-                onClick={onLogin}
-                className="flex items-center space-x-2 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-bold shadow-xs hover:shadow transition-all"
+                onClick={onOpenLoginModal}
+                className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                  />
+                <ShieldCheck className="w-4 h-4" />
+                <span>Masuk Akun</span>
+              </button>
+            )}
+
+            {/* Google Account Status (optional secondary indicator) */}
+            {user ? (
+              <div className="hidden xl:flex items-center space-x-1.5 text-[11px] text-slate-500 pl-2 border-l border-slate-200" title={`Google: ${user.email}`}>
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="truncate max-w-[90px]">{user.email?.split('@')[0]}</span>
+              </div>
+            ) : onLogin && (
+              <button
+                type="button"
+                onClick={onLogin}
+                title="Hubungkan Akun Google untuk Izin Simpan Otomatis ke Spreadsheet"
+                className="hidden xl:flex items-center space-x-1 text-[11px] text-slate-500 hover:text-slate-800 px-2 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200"
+              >
+                <svg className="w-3 h-3" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.33 24 12 24z"/>
+                  <path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/>
                 </svg>
-                <span className="hidden sm:inline">Masuk Google</span>
-                <span className="sm:hidden">Masuk</span>
+                <span>Google</span>
               </button>
             )}
           </div>

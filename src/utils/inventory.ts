@@ -657,6 +657,34 @@ export function transactionToHistoryPenjualanRow(tx: Transaction): (string | num
 
 export const SALES_SHEET_HEADERS = ['Nama Sales'];
 
+export const AKUN_SHEET_HEADERS = [
+  'ID Pengguna',
+  'Username',
+  'Password',
+  'Nama Lengkap',
+  'Role / Jabatan',
+  'Email',
+  'No. WhatsApp',
+  'Status',
+  'Terakhir Login',
+  'Catatan',
+];
+
+export function userAccountToRow(u: import('../types/inventory.js').UserAccount): (string | number)[] {
+  return [
+    u.id || '-',
+    u.username || '-',
+    u.password || '-',
+    u.name || '-',
+    u.role || 'Petugas Gudang',
+    u.email || '-',
+    u.phone || '-',
+    u.status || 'Aktif',
+    u.lastLogin || '-',
+    u.notes || '-',
+  ];
+}
+
 // Summary Sheet Headers and Mappers
 export const SUMMARY_SHEET_HEADERS = [
   'Indikator Gudang & Inventaris',
