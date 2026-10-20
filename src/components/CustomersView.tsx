@@ -16,12 +16,17 @@ import {
   FileText,
   Tag,
   CheckCircle2,
+  FileSpreadsheet,
+  RefreshCw,
 } from 'lucide-react';
 import type { Customer, CustomerType, PaymentMethod, CreditTerm } from '../types/inventory.js';
 import { SALES_PERSONS } from '../types/inventory.js';
 
 interface CustomersViewProps {
   customers: Customer[];
+  salesPersons?: string[];
+  isFetching?: boolean;
+  onRefreshFromSheet?: () => void;
   onAddCustomer: (customer: Omit<Customer, 'id' | 'createdAt' | 'lastUpdated'>) => void;
   onUpdateCustomer: (customer: Customer) => void;
   onDeleteCustomer: (customerId: string) => void;
@@ -30,11 +35,15 @@ interface CustomersViewProps {
 
 export const CustomersView: React.FC<CustomersViewProps> = ({
   customers,
+  salesPersons,
+  isFetching = false,
+  onRefreshFromSheet,
   onAddCustomer,
   onUpdateCustomer,
   onDeleteCustomer,
   onSelectCustomerForTransaction,
 }) => {
+  const activeSalesList = salesPersons && salesPersons.length > 0 ? salesPersons : [...SALES_PERSONS];
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<'ALL' | CustomerType>('ALL');
 
@@ -52,7 +61,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
   const [formType, setFormType] = useState<CustomerType>('Grosir');
   const [formPaymentMethod, setFormPaymentMethod] = useState<PaymentMethod>('CASH');
   const [formCreditTerm, setFormCreditTerm] = useState<CreditTerm>('14 Hari');
-  const [formSalesPerson, setFormSalesPerson] = useState<string>(SALES_PERSONS[0]);
+  const [formSalesPerson, setFormSalesPerson] = useState<string>(activeSalesList[0] || 'Sales');
   const [formNotes, setFormNotes] = useState('');
   const [formError, setFormError] = useState('');
 
@@ -94,7 +103,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     setFormType('Grosir');
     setFormPaymentMethod('CASH');
     setFormCreditTerm('14 Hari');
-    setFormSalesPerson(SALES_PERSONS[0]);
+    setFormSalesPerson(activeSalesList[0] || 'Sales');
     setFormNotes('');
     setFormError('');
     setIsModalOpen(true);
@@ -111,7 +120,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     setFormType(cust.type);
     setFormPaymentMethod(cust.paymentMethod || 'CASH');
     setFormCreditTerm(cust.creditTerm || '14 Hari');
-    setFormSalesPerson(cust.salesPerson || SALES_PERSONS[0]);
+    setFormSalesPerson(cust.salesPerson || activeSalesList[0] || 'Sales');
     setFormNotes(cust.notes || '');
     setFormError('');
     setIsModalOpen(true);
@@ -222,6 +231,23 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200">
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span>Sheet &quot;DATABASE CUSTOMER&quot;</span>
+          </div>
+
+          {onRefreshFromSheet && (
+            <button
+              onClick={onRefreshFromSheet}
+              disabled={isFetching}
+              className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:bg-slate-400"
+              title="Tarik data customer terbaru dari Google Sheet 'DATABASE CUSTOMER'"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+              <span>{isFetching ? 'Mengambil...' : 'Tarik dari Sheet'}</span>
+            </button>
+          )}
+
           <button
             onClick={handleExportCsv}
             className="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-colors"
@@ -662,7 +688,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                   onChange={(e) => setFormSalesPerson(e.target.value)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:bg-white"
                 >
-                  {SALES_PERSONS.map((sp) => (
+                  {activeSalesList.map((sp) => (
                     <option key={sp} value={sp}>
                       {sp}
                     </option>

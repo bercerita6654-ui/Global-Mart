@@ -28,6 +28,8 @@ import { generateNotaPdf } from '../utils/pdfGenerator.js';
 interface TransactionHistoryViewProps {
   transactions: Transaction[];
   spreadsheetConfig: SpreadsheetConfig | null;
+  isFetching?: boolean;
+  onRefreshFromSheets?: () => void;
   onOpenTransactionModal: (type: 'IN' | 'OUT') => void;
   onDeleteTransaction?: (id: string) => void;
   initialTypeFilter?: 'ALL' | 'IN' | 'OUT';
@@ -37,6 +39,8 @@ interface TransactionHistoryViewProps {
 export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
   transactions,
   spreadsheetConfig,
+  isFetching = false,
+  onRefreshFromSheets,
   onOpenTransactionModal,
   onDeleteTransaction,
   initialTypeFilter = 'ALL',
@@ -155,6 +159,23 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200">
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span>Sheet &quot;HISTORY PEMBELIAN&quot; &amp; &quot;PENJUALAN&quot;</span>
+          </div>
+
+          {onRefreshFromSheets && (
+            <button
+              onClick={onRefreshFromSheets}
+              disabled={isFetching}
+              className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:bg-slate-400"
+              title="Tarik data riwayat pembelian & penjualan terbaru dari Google Sheets"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+              <span>{isFetching ? 'Mengambil...' : 'Tarik dari Sheet'}</span>
+            </button>
+          )}
+
           <button
             onClick={handleExportExcel}
             className="flex items-center space-x-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors"

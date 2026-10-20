@@ -17,6 +17,8 @@ import {
   Users,
   Printer,
   Download,
+  Lock,
+  FileSpreadsheet,
 } from 'lucide-react';
 import type {
   Item,
@@ -48,6 +50,7 @@ interface TransactionModalProps {
   customers?: Customer[];
   suppliers?: Supplier[];
   transactions?: Transaction[];
+  salesPersons?: string[];
   defaultType?: TransactionType;
   preselectedItemId?: string;
   initialRecipient?: string;
@@ -62,18 +65,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   customers = [],
   suppliers = [],
   transactions = [],
+  salesPersons = [],
   defaultType = 'IN',
   preselectedItemId,
   initialRecipient = '',
   defaultOperator = 'Admin Gudang',
   onSubmit,
 }) => {
+  const activeSalesList = salesPersons && salesPersons.length > 0 ? salesPersons : [...SALES_PERSONS];
   const [type, setType] = useState<TransactionType>(defaultType);
   const [selectedItemId, setSelectedItemId] = useState<string>(preselectedItemId || (items[0]?.id || ''));
   const [quantity, setQuantity] = useState<number>(1);
   const [selectedTier, setSelectedTier] = useState<'eceran' | 'grosir' | 'partai' | 'custom'>('eceran');
   const [customPrice, setCustomPrice] = useState<number>(0);
-  const [salesPerson, setSalesPerson] = useState<string>(SALES_PERSONS[0]);
+  const [salesPerson, setSalesPerson] = useState<string>(activeSalesList[0] || 'Sales');
   const [paymentType, setPaymentType] = useState<PaymentMethod>('CASH');
   const [creditTerm, setCreditTerm] = useState<CreditTerm>('14 Hari');
   const [targetWarehouse, setTargetWarehouse] = useState<WarehouseLocation>('Gudang');
@@ -86,6 +91,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   const [searchFilter, setSearchFilter] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [showInvoicePreview, setShowInvoicePreview] = useState<boolean>(false);
+
+  // Real-time clock for Input Penjualan (type === 'OUT') so Tanggal & Waktu cannot be edited and stay strictly live
+  useEffect(() => {
+    if (!isOpen) return;
+    if (type === 'OUT') {
+      setDate(getCurrentDateFormatted());
+      setTime(getCurrentTimeFormatted());
+      const interval = setInterval(() => {
+        setDate(getCurrentDateFormatted());
+        setTime(getCurrentTimeFormatted());
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [isOpen, type]);
 
   const currentItem = items.find((i) => i.id === selectedItemId);
   const currentStock = currentItem?.currentStock ?? 0;
@@ -306,26 +325,26 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-xs">
       <div 
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-tx-title"
-        className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full border border-slate-200 overflow-hidden my-8 animate-in zoom-in-95 duration-150"
+        className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col border border-slate-200 overflow-hidden animate-in zoom-in-95 duration-150"
       >
-        {/* Header with Type Selector */}
-        <div className={`p-6 text-white transition-colors ${
+        {/* Header with Type Selector (shrink-0 so always visible) */}
+        <div className={`p-4 sm:p-5 shrink-0 text-white transition-colors ${
           type === 'IN' 
             ? 'bg-gradient-to-r from-emerald-600 to-teal-600' 
             : 'bg-gradient-to-r from-amber-600 to-rose-600'
         }`}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
               <span className="p-2 bg-white/20 rounded-xl backdrop-blur-xs">
                 {type === 'IN' ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
               </span>
               <div>
-                <h3 id="modal-tx-title" className="text-xl font-bold">
+                <h3 id="modal-tx-title" className="text-lg sm:text-xl font-bold">
                   {type === 'IN' ? 'Input Barang Masuk (Penerimaan)' : 'Input Penjualan'}
                 </h3>
                 <p className="text-xs text-white/80">
@@ -373,8 +392,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           </div>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        {/* Form Body (Scrollable flex-1) */}
+        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           {errorMsg && (
             <div className="flex items-start space-x-2.5 p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-medium animate-in fade-in">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -860,11 +879,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   Nama Sales Penjualan <span className="text-rose-500">*</span>
                 </label>
                 <span className="text-[10px] bg-rose-100 text-rose-800 font-bold px-2 py-0.5 rounded-full">
-                  5 Tim Sales
+                  {activeSalesList.length} Tim Sales (Sheet &apos;SALES&apos;)
                 </span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                {SALES_PERSONS.map((sales) => (
+                {activeSalesList.map((sales) => (
                   <button
                     key={sales}
                     type="button"
@@ -886,7 +905,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   onChange={(e) => setSalesPerson(e.target.value)}
                   className="w-full px-3 py-1.5 bg-white border border-rose-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
                 >
-                  {SALES_PERSONS.map((s) => (
+                  {activeSalesList.map((s) => (
                     <option key={s} value={s}>
                       Sales: {s}
                     </option>
@@ -899,45 +918,84 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
           {/* Date, Time & Operator */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label htmlFor="tx-date" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Tanggal
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="tx-date" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Tanggal
+                </label>
+                {type === 'OUT' ? (
+                  <span className="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded font-bold flex items-center space-x-1">
+                    <Lock className="w-2.5 h-2.5" />
+                    <span>Real-time</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-slate-500">Penerimaan</span>
+                )}
+              </div>
               <div className="relative">
-                <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
                   id="tx-date"
                   type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={(e) => {
+                    if (type !== 'OUT') setDate(e.target.value);
+                  }}
+                  readOnly={type === 'OUT'}
+                  title={type === 'OUT' ? 'Tanggal mengikuti realtime dan tidak dapat diubah' : 'Pilih tanggal'}
                   required
-                  className="w-full pl-9 pr-2 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white"
+                  className={`w-full pl-9 pr-2 py-2 border rounded-xl text-xs font-semibold ${
+                    type === 'OUT'
+                      ? 'bg-slate-100 text-slate-600 border-slate-300 cursor-not-allowed select-none'
+                      : 'bg-slate-50 border-slate-300 text-slate-800 focus:bg-white'
+                  }`}
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="tx-time" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Waktu (Jam)
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="tx-time" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Waktu (Jam)
+                </label>
+                {type === 'OUT' ? (
+                  <span className="text-[10px] bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded font-bold flex items-center space-x-1">
+                    <Lock className="w-2.5 h-2.5" />
+                    <span>Real-time</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-slate-500">Waktu Masuk</span>
+                )}
+              </div>
               <div className="relative">
-                <Clock className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <Clock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
                   id="tx-time"
                   type="time"
                   value={time}
-                  onChange={(e) => setTime(e.target.value)}
+                  onChange={(e) => {
+                    if (type !== 'OUT') setTime(e.target.value);
+                  }}
+                  readOnly={type === 'OUT'}
+                  title={type === 'OUT' ? 'Waktu jam mengikuti realtime dan tidak dapat diubah' : 'Pilih jam'}
                   required
-                  className="w-full pl-9 pr-2 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-slate-800 focus:bg-white"
+                  className={`w-full pl-9 pr-2 py-2 border rounded-xl text-xs font-semibold ${
+                    type === 'OUT'
+                      ? 'bg-slate-100 text-slate-600 border-slate-300 cursor-not-allowed select-none'
+                      : 'bg-slate-50 border-slate-300 text-slate-800 focus:bg-white'
+                  }`}
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="tx-operator" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                Petugas PIC
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="tx-operator" className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Petugas PIC
+                </label>
+                <span className="text-[10px] text-slate-500">Operator</span>
+              </div>
               <div className="relative">
-                <UserCheck className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <UserCheck className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
                   id="tx-operator"
                   type="text"
@@ -965,19 +1023,32 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             />
           </div>
 
-          {/* Submit & Cancel Buttons */}
-          <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-200">
+          {/* Auto-Sync to Spreadsheet Notice */}
+          <div className="p-2.5 bg-emerald-50/80 border border-emerald-200 rounded-xl flex items-center space-x-2 text-xs text-emerald-900">
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="text-[11px] leading-tight">
+              Otomatis masuk ke spreadsheet pada sheet{' '}
+              <strong className="text-emerald-950 underline decoration-emerald-400">
+                &quot;{type === 'IN' ? 'HISTORY PEMBELIAN' : 'HISTORY PENJUALAN'}&quot;
+              </strong>{' '}
+              dan otomatis perbarui stok di sheet{' '}
+              <strong className="text-emerald-950 underline decoration-emerald-400">&quot;STOCK LIST&quot;</strong>.
+            </span>
+          </div>
+
+          {/* Submit & Cancel Buttons (Sticky footer so always visible) */}
+          <div className="sticky bottom-0 bg-white/95 backdrop-blur-xs flex items-center justify-between pt-3 pb-1 border-t border-slate-200 shrink-0">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              className="px-4 py-2 rounded-xl border border-slate-300 text-xs sm:text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={type === 'OUT' && !stockValidation.valid}
-              className={`flex items-center space-x-2 px-6 py-2.5 rounded-xl text-sm font-bold text-white shadow-md transition-all ${
+              className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white shadow-md transition-all ${
                 type === 'OUT' && !stockValidation.valid
                   ? 'bg-slate-300 cursor-not-allowed text-slate-500'
                   : type === 'IN'

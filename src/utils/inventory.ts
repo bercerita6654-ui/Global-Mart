@@ -517,6 +517,146 @@ export function supplierToSheetRow(s: import('../types/inventory.js').Supplier):
   ];
 }
 
+// -----------------------------------------------------------------------------
+// Sheet Mappings for Specific User Sheet Tabs:
+// - "DATABASE CUSTOMER"
+// - "DATABASE SUPPLIER"
+// - "HISTORY PEMBELIAN"
+// - "HISTORY PENJUALAN"
+// - "SALES"
+// -----------------------------------------------------------------------------
+
+export const DATABASE_CUSTOMER_HEADERS = [
+  'Kode & Nama Customer',
+  'Kategori Tier',
+  'Pembayaran & Termin',
+  'Sales Penanggung Jawab',
+  'Kontak & WhatsApp',
+  'Kota / Wilayah',
+  'Alamat Lengkap',
+];
+
+export function customerToDatabaseCustomerRow(c: import('../types/inventory.js').Customer): (string | number)[] {
+  const codeName = c.code ? `${c.code} - ${c.name}` : c.name;
+  const payTerm =
+    c.paymentMethod === 'KREDIT'
+      ? `KREDIT (${c.creditTerm || '14 Hari'})`
+      : 'CASH';
+  return [
+    codeName,
+    c.type || 'Grosir',
+    payTerm,
+    c.salesPerson || '-',
+    c.phone || '-',
+    c.city || '-',
+    c.address || '-',
+  ];
+}
+
+export const DATABASE_SUPPLIER_HEADERS = [
+  'Kode',
+  'Nama Supplier / Vendor',
+  'Kontak & PIC',
+  'Wilayah & Alamat',
+  'Catatan Khusus',
+  'Aksi',
+];
+
+export function supplierToDatabaseSupplierRow(s: import('../types/inventory.js').Supplier): (string | number)[] {
+  const kontakPic = s.contactPerson ? `${s.phone} (${s.contactPerson})` : s.phone;
+  const wilayahAlamat = s.city ? `${s.city} - ${s.address}` : s.address;
+  return [
+    s.code || '-',
+    s.name || '-',
+    kontakPic || '-',
+    wilayahAlamat || '-',
+    s.notes || '-',
+    '-',
+  ];
+}
+
+export const HISTORY_PEMBELIAN_HEADERS = [
+  'ID Masuk',
+  'Waktu Penerimaan',
+  'Nama Barang & SKU',
+  '🏢 Lokasi Gudang Masuk',
+  'Kuantitas Masuk',
+  'Harga Modal Satuan',
+  'Total Nilai Pembelian',
+  'Pemasok / Supplier',
+  'No. PO / Surat Jalan',
+  'Petugas Penerima',
+  'Aksi',
+];
+
+export function transactionToHistoryPembelianRow(tx: Transaction): (string | number)[] {
+  const namaSku = tx.sku ? `${tx.itemName} (${tx.sku})` : tx.itemName;
+  const waktu = tx.time ? `${tx.date} ${tx.time}` : tx.date;
+  return [
+    tx.id,
+    waktu,
+    namaSku,
+    tx.targetWarehouse || 'Gudang Utama',
+    tx.quantity,
+    tx.unitPrice,
+    tx.totalPrice,
+    tx.recipientOrSupplier || '-',
+    tx.referenceDoc || '-',
+    tx.operator || '-',
+    tx.notes || '-',
+  ];
+}
+
+export const HISTORY_PENJUALAN_HEADERS = [
+  'ID Penjualan',
+  'Waktu Penjualan',
+  'Nama Barang & SKU',
+  '🏷️ Kategori Harga',
+  'Kuantitas Terjual',
+  'Harga Satuan Terjual',
+  'Total Penjualan',
+  'Pelanggan / Customer',
+  'Sales Penanggung Jawab',
+  'Metode Pembayaran',
+  'No. DO / Ref',
+  'Aksi',
+];
+
+export function transactionToHistoryPenjualanRow(tx: Transaction): (string | number)[] {
+  const namaSku = tx.sku ? `${tx.itemName} (${tx.sku})` : tx.itemName;
+  const waktu = tx.time ? `${tx.date} ${tx.time}` : tx.date;
+  const kategoriHarga =
+    tx.priceTierUsed === 'eceran'
+      ? 'Eceran'
+      : tx.priceTierUsed === 'grosir'
+      ? 'Grosir'
+      : tx.priceTierUsed === 'partai'
+      ? 'Partai'
+      : tx.priceTierUsed === 'modal'
+      ? 'Modal (HPP)'
+      : 'Eceran';
+  const payMethod =
+    tx.paymentMethod === 'KREDIT'
+      ? `KREDIT (${tx.creditTerm || '14 Hari'})`
+      : 'CASH';
+  return [
+    tx.id,
+    waktu,
+    namaSku,
+    kategoriHarga,
+    tx.quantity,
+    tx.unitPrice,
+    tx.totalPrice,
+    tx.recipientOrSupplier || '-',
+    tx.salesPerson || '-',
+    payMethod,
+    tx.referenceDoc || '-',
+    tx.notes || '-',
+  ];
+}
+
+export const SALES_SHEET_HEADERS = ['Nama Sales'];
+
 // Summary Sheet Headers and Mappers
 export const SUMMARY_SHEET_HEADERS = [
   'Indikator Gudang & Inventaris',

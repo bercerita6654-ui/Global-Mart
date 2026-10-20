@@ -12,6 +12,7 @@ import {
   SpreadsheetConfig,
   Customer,
   Supplier,
+  SALES_PERSONS,
   TARGET_SPREADSHEET_ID,
   TARGET_SPREADSHEET_URL,
   TARGET_SPREADSHEET_TITLE,
@@ -35,9 +36,17 @@ import {
 import {
   createInventorySpreadsheet,
   appendTransactionToSheet,
+  appendCustomerToSheet,
+  appendSupplierToSheet,
+  appendItemToSheet,
+  appendSalesToSheet,
   syncFullDataToSheet,
   testSpreadsheetConnection,
   fetchStockListFromSheet,
+  fetchCustomersFromSheet,
+  fetchSuppliersFromSheet,
+  fetchTransactionsFromSheets,
+  fetchSalesFromSheet,
 } from './services/googleSheets.js';
 
 // Components
@@ -58,6 +67,7 @@ const STORAGE_KEYS = {
   TRANSACTIONS: 'stockflow_transactions_v1',
   CUSTOMERS: 'stockflow_customers_v1',
   SUPPLIERS: 'stockflow_suppliers_v1',
+  SALES: 'stockflow_sales_v1',
   SHEET_CONFIG: 'stockflow_sheet_config_v1',
 };
 
@@ -187,6 +197,16 @@ export default function App() {
     return INITIAL_SUPPLIERS;
   });
 
+  const [salesPersons, setSalesPersons] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.SALES);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Failed to load sales persons:', e);
+    }
+    return [...SALES_PERSONS];
+  });
+
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.TRANSACTIONS);
@@ -221,6 +241,9 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [isFetchingFromSheets, setIsFetchingFromSheets] = useState<boolean>(false);
+  const [isFetchingCustomers, setIsFetchingCustomers] = useState<boolean>(false);
+  const [isFetchingSuppliers, setIsFetchingSuppliers] = useState<boolean>(false);
+  const [isFetchingTransactions, setIsFetchingTransactions] = useState<boolean>(false);
 
   // Modals State
   const [transactionModalOpen, setTransactionModalOpen] = useState(false);
@@ -279,6 +302,10 @@ export default function App() {
   }, [suppliers]);
 
   useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.SALES, JSON.stringify(salesPersons));
+  }, [salesPersons]);
+
+  useEffect(() => {
     if (spreadsheetConfig) {
       localStorage.setItem(STORAGE_KEYS.SHEET_CONFIG, JSON.stringify(spreadsheetConfig));
     }
@@ -299,18 +326,70 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Auto-fetch stock list from sheet on initial load to ensure up-to-date items
+  // Auto-fetch from target sheets on initial load to ensure up-to-date data:
+  // - "STOCK LIST" -> Items
+  // - "DATABASE CUSTOMER" -> Customers
+  // - "DATABASE SUPPLIER" -> Suppliers
+  // - "HISTORY PEMBELIAN" & "HISTORY PENJUALAN" -> Transactions
+  // - "SALES" -> Sales Representatives
   useEffect(() => {
     let isCancelled = false;
     const fetchLatest = async () => {
       try {
         const token = await getAccessToken();
-        const res = await fetchStockListFromSheet(token, spreadsheetConfig.spreadsheetId);
-        if (!isCancelled && res.items && res.items.length > 0) {
-          setItems(res.items);
+        const id = spreadsheetConfig.spreadsheetId;
+
+        // 1. Stock List ("STOCK LIST")
+        try {
+          const resItems = await fetchStockListFromSheet(token, id);
+          if (!isCancelled && resItems.items && resItems.items.length > 0) {
+            setItems(resItems.items);
+          }
+        } catch (err) {
+          console.warn('Initial stock sync notice:', err);
+        }
+
+        // 2. Customers ("DATABASE CUSTOMER")
+        try {
+          const resCust = await fetchCustomersFromSheet(token, id);
+          if (!isCancelled && resCust.customers && resCust.customers.length > 0) {
+            setCustomers(resCust.customers);
+          }
+        } catch (err) {
+          console.warn('Initial customer sync notice:', err);
+        }
+
+        // 3. Suppliers ("DATABASE SUPPLIER")
+        try {
+          const resSupp = await fetchSuppliersFromSheet(token, id);
+          if (!isCancelled && resSupp.suppliers && resSupp.suppliers.length > 0) {
+            setSuppliers(resSupp.suppliers);
+          }
+        } catch (err) {
+          console.warn('Initial supplier sync notice:', err);
+        }
+
+        // 4. History Pembelian & Penjualan
+        try {
+          const resTxs = await fetchTransactionsFromSheets(token, id);
+          if (!isCancelled && resTxs.transactions && resTxs.transactions.length > 0) {
+            setTransactions(resTxs.transactions);
+          }
+        } catch (err) {
+          console.warn('Initial transactions sync notice:', err);
+        }
+
+        // 5. Sales Representatives ("SALES")
+        try {
+          const resSales = await fetchSalesFromSheet(token, id);
+          if (!isCancelled && resSales.length > 0) {
+            setSalesPersons(resSales);
+          }
+        } catch (err) {
+          console.warn('Initial sales sync notice:', err);
         }
       } catch (err) {
-        console.warn('Initial background sync of stock list:', err);
+        console.warn('Initial background sync error:', err);
       }
     };
     fetchLatest();
@@ -339,7 +418,8 @@ export default function App() {
             items,
             transactions,
             customers,
-            suppliers
+            suppliers,
+            salesPersons
           );
           if (res.success) {
             setSpreadsheetConfig((prev) => ({
@@ -376,7 +456,7 @@ export default function App() {
     });
   };
 
-  // Quick or Full Sync to Google Sheets (Saves all items, transactions, customers, suppliers)
+  // Quick or Full Sync to Google Sheets (Saves all items, transactions, customers, suppliers, sales)
   const handleFullSync = async () => {
     let token = await getAccessToken();
     if (!token) {
@@ -403,7 +483,8 @@ export default function App() {
         items,
         transactions,
         customers,
-        suppliers
+        suppliers,
+        salesPersons
       );
       if (res.success) {
         const updatedConfig = {
@@ -445,6 +526,222 @@ export default function App() {
       showToast('error', err.message || 'Gagal mengambil data dari sheet.');
     } finally {
       setIsFetchingFromSheets(false);
+    }
+  };
+
+  // Fetch Customers directly from sheet "DATABASE CUSTOMER"
+  const handleFetchCustomersFromSheet = async () => {
+    setIsFetchingCustomers(true);
+    try {
+      const token = await getAccessToken();
+      const res = await fetchCustomersFromSheet(token, spreadsheetConfig.spreadsheetId);
+      if (res.customers.length > 0) {
+        setCustomers(res.customers);
+        showToast(
+          'success',
+          `Berhasil mengambil ${res.count} data pelanggan langsung dari sheet "${res.sheetTitle}"!`
+        );
+      } else {
+        showToast(
+          'info',
+          `Sheet "${res.sheetTitle}" ditemukan. Jika baru dibuat, silakan isi baris data customer atau klik Simpan ke Google Sheets.`
+        );
+      }
+    } catch (err: any) {
+      console.error('Fetch customer error:', err);
+      showToast('error', err.message || 'Gagal mengambil data customer dari sheet.');
+    } finally {
+      setIsFetchingCustomers(false);
+    }
+  };
+
+  // Fetch Suppliers directly from sheet "DATABASE SUPPLIER"
+  const handleFetchSuppliersFromSheet = async () => {
+    setIsFetchingSuppliers(true);
+    try {
+      const token = await getAccessToken();
+      const res = await fetchSuppliersFromSheet(token, spreadsheetConfig.spreadsheetId);
+      if (res.suppliers.length > 0) {
+        setSuppliers(res.suppliers);
+        showToast(
+          'success',
+          `Berhasil mengambil ${res.count} data supplier langsung dari sheet "${res.sheetTitle}"!`
+        );
+      } else {
+        showToast(
+          'info',
+          `Sheet "${res.sheetTitle}" ditemukan. Belum ada baris distributor/vendor baru.`
+        );
+      }
+    } catch (err: any) {
+      console.error('Fetch supplier error:', err);
+      showToast('error', err.message || 'Gagal mengambil data supplier dari sheet.');
+    } finally {
+      setIsFetchingSuppliers(false);
+    }
+  };
+
+  // Fetch Transactions directly from sheets "HISTORY PEMBELIAN" and "HISTORY PENJUALAN"
+  const handleFetchTransactionsFromSheet = async () => {
+    setIsFetchingTransactions(true);
+    try {
+      const token = await getAccessToken();
+      const res = await fetchTransactionsFromSheets(token, spreadsheetConfig.spreadsheetId);
+      if (res.transactions.length > 0) {
+        setTransactions(res.transactions);
+        showToast(
+          'success',
+          `Berhasil mengambil ${res.count} riwayat mutasi dari sheet "HISTORY PEMBELIAN" & "PENJUALAN"!`
+        );
+      } else {
+        showToast(
+          'info',
+          'Sheet riwayat mutasi ditemukan tetapi belum memiliki baris data mutasi transaksi baru.'
+        );
+      }
+    } catch (err: any) {
+      console.error('Fetch transactions error:', err);
+      showToast('error', err.message || 'Gagal mengambil data riwayat mutasi dari sheet.');
+    } finally {
+      setIsFetchingTransactions(false);
+    }
+  };
+
+  // Fetch All data from sheets at once
+  const handleFetchAllFromSheets = async () => {
+    setIsFetchingFromSheets(true);
+    showToast('info', 'Sedang mengambil seluruh data dari spreadsheet Google Sheets...');
+    try {
+      const token = await getAccessToken();
+      const id = spreadsheetConfig.spreadsheetId;
+      const [resItems, resCust, resSupp, resTxs, resSales] = await Promise.all([
+        fetchStockListFromSheet(token, id).catch(() => ({ items: [], sheetTitle: 'STOCK LIST', count: 0 })),
+        fetchCustomersFromSheet(token, id).catch(() => ({ customers: [], sheetTitle: 'DATABASE CUSTOMER', count: 0 })),
+        fetchSuppliersFromSheet(token, id).catch(() => ({ suppliers: [], sheetTitle: 'DATABASE SUPPLIER', count: 0 })),
+        fetchTransactionsFromSheets(token, id).catch(() => ({ transactions: [], count: 0 })),
+        fetchSalesFromSheet(token, id).catch(() => []),
+      ]);
+
+      let summaryMsg = [];
+      if (resItems.items.length > 0) {
+        setItems(resItems.items);
+        summaryMsg.push(`${resItems.items.length} produk`);
+      }
+      if (resCust.customers.length > 0) {
+        setCustomers(resCust.customers);
+        summaryMsg.push(`${resCust.customers.length} customer`);
+      }
+      if (resSupp.suppliers.length > 0) {
+        setSuppliers(resSupp.suppliers);
+        summaryMsg.push(`${resSupp.suppliers.length} supplier`);
+      }
+      if (resTxs.transactions.length > 0) {
+        setTransactions(resTxs.transactions);
+        summaryMsg.push(`${resTxs.transactions.length} mutasi`);
+      }
+      if (resSales.length > 0) {
+        setSalesPersons(resSales);
+        summaryMsg.push(`${resSales.length} tim sales`);
+      }
+
+      if (summaryMsg.length > 0) {
+        showToast('success', `Tarik data berhasil: ${summaryMsg.join(', ')} diperbarui dari spreadsheet!`);
+      } else {
+        showToast('info', 'Spreadsheet terhubung. Tidak ada perubahan data baru dari Google Sheets.');
+      }
+    } catch (err: any) {
+      console.error('Fetch all error:', err);
+      showToast('error', err.message || 'Gagal mengambil seluruh data dari spreadsheet.');
+    } finally {
+      setIsFetchingFromSheets(false);
+    }
+  };
+
+  // Centralized Auto-Sync Dispatcher to ensure all inputs automatically go into their respective sheet in Google Sheets:
+  // - Transaction OUT -> Sheet "HISTORY PENJUALAN" & updates "STOCK LIST" & "MUTASI_TRANSAKSI"
+  // - Transaction IN  -> Sheet "HISTORY PEMBELIAN" & updates "STOCK LIST" & "MUTASI_TRANSAKSI"
+  // - Customer        -> Sheet "DATABASE CUSTOMER"
+  // - Supplier        -> Sheet "DATABASE SUPPLIER"
+  // - Item            -> Sheet "STOCK LIST"
+  // - Sales           -> Sheet "SALES"
+  const autoSyncMutationToSheets = async (
+    actionType: 'TRANSACTION' | 'ITEM' | 'CUSTOMER' | 'SUPPLIER' | 'SALES',
+    payload: {
+      newItems?: Item[];
+      newTransactions?: Transaction[];
+      newCustomers?: Customer[];
+      newSuppliers?: Supplier[];
+      newSalesPersons?: string[];
+      singleTx?: Transaction;
+      singleCust?: Customer;
+      singleSupp?: Supplier;
+      singleItem?: Item;
+      singleSales?: string;
+    }
+  ) => {
+    const spreadsheetId = spreadsheetConfig?.spreadsheetId || TARGET_SPREADSHEET_ID;
+    if (!spreadsheetId) return;
+
+    const token = await getAccessToken();
+    if (!token) {
+      showToast(
+        'info',
+        'Data tersimpan di aplikasi! Masuk Akun Google di kanan atas agar otomatis masuk ke Google Sheets.'
+      );
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      // 1. Direct row append to target sheet
+      if (actionType === 'TRANSACTION' && payload.singleTx) {
+        await appendTransactionToSheet(token, spreadsheetId, payload.singleTx);
+      } else if (actionType === 'CUSTOMER' && payload.singleCust) {
+        await appendCustomerToSheet(token, spreadsheetId, payload.singleCust);
+      } else if (actionType === 'SUPPLIER' && payload.singleSupp) {
+        await appendSupplierToSheet(token, spreadsheetId, payload.singleSupp);
+      } else if (actionType === 'ITEM' && payload.singleItem) {
+        await appendItemToSheet(token, spreadsheetId, payload.singleItem);
+      } else if (actionType === 'SALES' && payload.singleSales) {
+        await appendSalesToSheet(token, spreadsheetId, payload.singleSales);
+      }
+
+      // 2. Full synchronization across all sheets
+      const res = await syncFullDataToSheet(
+        token,
+        spreadsheetId,
+        payload.newItems || items,
+        payload.newTransactions || transactions,
+        payload.newCustomers || customers,
+        payload.newSuppliers || suppliers,
+        payload.newSalesPersons || salesPersons
+      );
+
+      if (res.success) {
+        setSpreadsheetConfig((prev) => ({
+          ...prev,
+          lastSyncedAt: new Date().toLocaleTimeString('id-ID'),
+        }));
+
+        const targetSheetLabel =
+          actionType === 'TRANSACTION'
+            ? payload.singleTx?.type === 'IN'
+              ? 'HISTORY PEMBELIAN & STOCK LIST'
+              : 'HISTORY PENJUALAN & STOCK LIST'
+            : actionType === 'CUSTOMER'
+            ? 'DATABASE CUSTOMER'
+            : actionType === 'SUPPLIER'
+            ? 'DATABASE SUPPLIER'
+            : actionType === 'ITEM'
+            ? 'STOCK LIST'
+            : 'SALES';
+
+        showToast('success', `Otomatis tersimpan ke spreadsheet: sheet "${targetSheetLabel}"!`);
+      }
+    } catch (err: any) {
+      console.warn('Auto-sync error:', err);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -562,38 +859,28 @@ export default function App() {
     }
 
     const updatedTransactions = [recordedTransaction, ...transactions];
+    let updatedSales = salesPersons;
+    if (txData.salesPerson && !salesPersons.includes(txData.salesPerson)) {
+      updatedSales = [...salesPersons, txData.salesPerson];
+      setSalesPersons(updatedSales);
+    }
+
     setItems(updatedItems);
     setTransactions(updatedTransactions);
 
-    // Auto-sync to Google Sheets if configured and authenticated
-    if (spreadsheetConfig?.spreadsheetId && spreadsheetConfig.autoSync) {
-      const token = await getAccessToken();
-      if (token) {
-        setIsSyncing(true);
-        try {
-          await appendTransactionToSheet(token, spreadsheetConfig.spreadsheetId, recordedTransaction);
-          await syncFullDataToSheet(
-            token,
-            spreadsheetConfig.spreadsheetId,
-            updatedItems,
-            updatedTransactions,
-            customers,
-            suppliers
-          );
-          setSpreadsheetConfig((prev) => ({
-            ...prev,
-            lastSyncedAt: new Date().toLocaleTimeString('id-ID'),
-          }));
-        } catch (syncErr) {
-          console.warn('Auto-sync failed in background:', syncErr);
-        } finally {
-          setIsSyncing(false);
-        }
-      }
-    }
+    // Otomatis simpan ke spreadsheet sesuai sheet masing-masing:
+    // - HISTORY PENJUALAN / PEMBELIAN
+    // - STOCK LIST (stok terpotong/bertambah)
+    // - MUTASI_TRANSAKSI (log gabungan)
+    await autoSyncMutationToSheets('TRANSACTION', {
+      singleTx: recordedTransaction,
+      newItems: updatedItems,
+      newTransactions: updatedTransactions,
+      newSalesPersons: updatedSales,
+    });
   };
 
-  // Add Item Handler
+  // Add Item Handler (Otomatis masuk ke sheet "STOCK LIST")
   const handleAddItem = async (newItemData: Omit<Item, 'id' | 'lastUpdated'>) => {
     const newItem: Item = {
       ...newItemData,
@@ -605,41 +892,24 @@ export default function App() {
     setItems(newItemsList);
     showToast('success', `Master barang [${newItem.sku}] ${newItem.name} berhasil ditambahkan.`);
 
-    // If connected to sheets, sync
-    if (spreadsheetConfig?.spreadsheetId) {
-      const token = await getAccessToken();
-      if (token) {
-        syncFullDataToSheet(
-          token,
-          spreadsheetConfig.spreadsheetId,
-          newItemsList,
-          transactions,
-          customers,
-          suppliers
-        );
-      }
-    }
+    // Otomatis sync ke sheet "STOCK LIST"
+    await autoSyncMutationToSheets('ITEM', {
+      singleItem: newItem,
+      newItems: newItemsList,
+    });
   };
 
-  // Update Item Handler
+  // Update Item Handler (Otomatis perbarui di sheet "STOCK LIST")
   const handleUpdateItem = async (updatedItem: Item) => {
     const updatedList = items.map((i) => (i.id === updatedItem.id ? updatedItem : i));
     setItems(updatedList);
     showToast('success', `Data barang [${updatedItem.sku}] berhasil diperbarui.`);
 
-    if (spreadsheetConfig?.spreadsheetId) {
-      const token = await getAccessToken();
-      if (token) {
-        syncFullDataToSheet(
-          token,
-          spreadsheetConfig.spreadsheetId,
-          updatedList,
-          transactions,
-          customers,
-          suppliers
-        );
-      }
-    }
+    // Otomatis sync ke sheet "STOCK LIST"
+    await autoSyncMutationToSheets('ITEM', {
+      singleItem: updatedItem,
+      newItems: updatedList,
+    });
   };
 
   // Delete Item Handler (with confirmation dialog for destructive operation)
@@ -658,19 +928,9 @@ export default function App() {
         setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         showToast('info', `Barang [${target.sku}] telah dihapus.`);
 
-        if (spreadsheetConfig?.spreadsheetId) {
-          const token = await getAccessToken();
-          if (token) {
-            syncFullDataToSheet(
-              token,
-              spreadsheetConfig.spreadsheetId,
-              remainingItems,
-              transactions,
-              customers,
-              suppliers
-            );
-          }
-        }
+        await autoSyncMutationToSheets('ITEM', {
+          newItems: remainingItems,
+        });
       },
     });
   };
@@ -714,19 +974,10 @@ export default function App() {
           `Transaksi mutasi [${tx.id}] berhasil dihapus dan stok barang telah disesuaikan.`
         );
 
-        if (spreadsheetConfig?.spreadsheetId) {
-          const token = await getAccessToken();
-          if (token) {
-            syncFullDataToSheet(
-              token,
-              spreadsheetConfig.spreadsheetId,
-              updatedItems,
-              remainingTransactions,
-              customers,
-              suppliers
-            );
-          }
-        }
+        await autoSyncMutationToSheets('TRANSACTION', {
+          newItems: updatedItems,
+          newTransactions: remainingTransactions,
+        });
       },
     });
   };
@@ -794,7 +1045,7 @@ export default function App() {
     return true;
   };
 
-  // Customer Handlers
+  // Customer Handlers (Otomatis masuk ke sheet "DATABASE CUSTOMER")
   const handleAddCustomer = (newCustData: Omit<Customer, 'id' | 'createdAt' | 'lastUpdated'>) => {
     const newCust: Customer = {
       ...newCustData,
@@ -806,13 +1057,10 @@ export default function App() {
     setCustomers(updatedCustomers);
     showToast('success', `Customer [${newCust.code}] ${newCust.name} berhasil ditambahkan.`);
 
-    if (spreadsheetConfig?.spreadsheetId) {
-      getAccessToken().then((token) => {
-        if (token) {
-          syncFullDataToSheet(token, spreadsheetConfig.spreadsheetId, items, transactions, updatedCustomers, suppliers);
-        }
-      });
-    }
+    autoSyncMutationToSheets('CUSTOMER', {
+      singleCust: newCust,
+      newCustomers: updatedCustomers,
+    });
   };
 
   const handleUpdateCustomer = (updatedCust: Customer) => {
@@ -820,13 +1068,10 @@ export default function App() {
     setCustomers(updatedCustomers);
     showToast('success', `Data customer [${updatedCust.code}] berhasil diperbarui.`);
 
-    if (spreadsheetConfig?.spreadsheetId) {
-      getAccessToken().then((token) => {
-        if (token) {
-          syncFullDataToSheet(token, spreadsheetConfig.spreadsheetId, items, transactions, updatedCustomers, suppliers);
-        }
-      });
-    }
+    autoSyncMutationToSheets('CUSTOMER', {
+      singleCust: updatedCust,
+      newCustomers: updatedCustomers,
+    });
   };
 
   const handleDeleteCustomer = (customerId: string) => {
@@ -845,13 +1090,9 @@ export default function App() {
         setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         showToast('info', `Customer [${target.code}] ${target.name} telah dihapus.`);
 
-        if (spreadsheetConfig?.spreadsheetId) {
-          getAccessToken().then((token) => {
-            if (token) {
-              syncFullDataToSheet(token, spreadsheetConfig.spreadsheetId, items, transactions, remainingCustomers, suppliers);
-            }
-          });
-        }
+        autoSyncMutationToSheets('CUSTOMER', {
+          newCustomers: remainingCustomers,
+        });
       },
     });
   };
@@ -863,7 +1104,7 @@ export default function App() {
     setTransactionModalOpen(true);
   };
 
-  // Supplier Database Handlers
+  // Supplier Database Handlers (Otomatis masuk ke sheet "DATABASE SUPPLIER")
   const handleAddSupplier = (newSupData: Omit<Supplier, 'id' | 'createdAt' | 'lastUpdated'>) => {
     const newSup: Supplier = {
       ...newSupData,
@@ -875,13 +1116,10 @@ export default function App() {
     setSuppliers(updatedSuppliers);
     showToast('success', `Supplier [${newSup.code}] ${newSup.name} berhasil ditambahkan ke Database.`);
 
-    if (spreadsheetConfig?.spreadsheetId) {
-      getAccessToken().then((token) => {
-        if (token) {
-          syncFullDataToSheet(token, spreadsheetConfig.spreadsheetId, items, transactions, customers, updatedSuppliers);
-        }
-      });
-    }
+    autoSyncMutationToSheets('SUPPLIER', {
+      singleSupp: newSup,
+      newSuppliers: updatedSuppliers,
+    });
   };
 
   const handleUpdateSupplier = (updatedSup: Supplier) => {
@@ -889,13 +1127,10 @@ export default function App() {
     setSuppliers(updatedSuppliers);
     showToast('success', `Data supplier [${updatedSup.code}] berhasil diperbarui.`);
 
-    if (spreadsheetConfig?.spreadsheetId) {
-      getAccessToken().then((token) => {
-        if (token) {
-          syncFullDataToSheet(token, spreadsheetConfig.spreadsheetId, items, transactions, customers, updatedSuppliers);
-        }
-      });
-    }
+    autoSyncMutationToSheets('SUPPLIER', {
+      singleSupp: updatedSup,
+      newSuppliers: updatedSuppliers,
+    });
   };
 
   const handleDeleteSupplier = (supplierId: string) => {
@@ -914,13 +1149,9 @@ export default function App() {
         setConfirmModal((prev) => ({ ...prev, isOpen: false }));
         showToast('info', `Supplier [${target.code}] ${target.name} telah dihapus.`);
 
-        if (spreadsheetConfig?.spreadsheetId) {
-          getAccessToken().then((token) => {
-            if (token) {
-              syncFullDataToSheet(token, spreadsheetConfig.spreadsheetId, items, transactions, customers, remainingSuppliers);
-            }
-          });
-        }
+        autoSyncMutationToSheets('SUPPLIER', {
+          newSuppliers: remainingSuppliers,
+        });
       },
     });
   };
@@ -1023,10 +1254,19 @@ export default function App() {
                 onClick={handleFetchFromStockListSheet}
                 disabled={isFetchingFromSheets}
                 className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/25 transition-all cursor-pointer disabled:bg-slate-700"
-                title="Ambil dan sinkronkan data barang langsung dari sheet ' STOCK LIST'"
+                title="Ambil dan sinkronkan data barang langsung dari sheet 'STOCK LIST'"
               >
                 <Download className={`w-4 h-4 ${isFetchingFromSheets ? 'animate-bounce' : ''}`} />
-                <span>{isFetchingFromSheets ? 'Mengambil Data...' : "Tarik dari Sheet 'STOCK LIST'"}</span>
+                <span>{isFetchingFromSheets ? 'Mengambil...' : "Tarik 'STOCK LIST'"}</span>
+              </button>
+              <button
+                onClick={handleFetchAllFromSheets}
+                disabled={isFetchingFromSheets}
+                className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-white px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md transition-all cursor-pointer border border-slate-700 disabled:bg-slate-700"
+                title="Tarik seluruh data: Stock List, Database Customer, Database Supplier, History Pembelian & Penjualan, dan Tim Sales"
+              >
+                <RefreshCw className={`w-4 h-4 ${isFetchingFromSheets ? 'animate-spin' : ''}`} />
+                <span>Tarik Semua Sheets</span>
               </button>
               <button
                 onClick={handleFullSync}
@@ -1089,6 +1329,9 @@ export default function App() {
         {activeTab === 'customers' && (
           <CustomersView
             customers={customers}
+            salesPersons={salesPersons}
+            isFetching={isFetchingCustomers}
+            onRefreshFromSheet={handleFetchCustomersFromSheet}
             onAddCustomer={handleAddCustomer}
             onUpdateCustomer={handleUpdateCustomer}
             onDeleteCustomer={handleDeleteCustomer}
@@ -1099,6 +1342,8 @@ export default function App() {
         {activeTab === 'suppliers' && (
           <SuppliersView
             suppliers={suppliers}
+            isFetching={isFetchingSuppliers}
+            onRefreshFromSheet={handleFetchSuppliersFromSheet}
             onAddSupplier={handleAddSupplier}
             onUpdateSupplier={handleUpdateSupplier}
             onDeleteSupplier={handleDeleteSupplier}
@@ -1110,6 +1355,8 @@ export default function App() {
           <TransactionHistoryView
             transactions={transactions}
             spreadsheetConfig={spreadsheetConfig}
+            isFetching={isFetchingTransactions}
+            onRefreshFromSheets={handleFetchTransactionsFromSheet}
             onOpenTransactionModal={openTransactionModal}
             onDeleteTransaction={handleDeleteTransaction}
             initialTypeFilter={historyFilter}
@@ -1147,6 +1394,7 @@ export default function App() {
         customers={customers}
         suppliers={suppliers}
         transactions={transactions}
+        salesPersons={salesPersons}
         defaultType={txModalType}
         preselectedItemId={preselectedItemId}
         initialRecipient={preselectedRecipient}

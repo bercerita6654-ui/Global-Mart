@@ -292,18 +292,20 @@ export const SpreadsheetModal: React.FC<SpreadsheetModalProps> = ({
 
             {activeSubTab === 'create' ? (
               <div className="space-y-3">
-                <p className="text-xs text-slate-600">
-                  Sistem akan membuat Google Spreadsheet baru di Google Drive Anda dengan lembar kerja:
+                <p className="text-xs text-slate-600 leading-relaxed">
+                  Sistem terhubung dengan lembar kerja spreadsheet:
                   <br />
-                  1. <strong className="text-slate-800">DATA_BARANG</strong> (Master data produk, harga modal &amp; bertingkat, stok 3 gudang)
+                  1. <strong className="text-slate-800">STOCK LIST</strong> (Master data produk, HPP, Eceran, Grosir, Partai, stok 3 gudang)
                   <br />
-                  2. <strong className="text-slate-800">MUTASI_TRANSAKSI</strong> (Log masuk/keluar lengkap)
+                  2. <strong className="text-slate-800">DATABASE CUSTOMER</strong> (Database pelanggan, klasifikasi tier, dan metode pembayaran)
                   <br />
-                  3. <strong className="text-slate-800">DATA_PELANGGAN</strong> (Database customer/toko)
+                  3. <strong className="text-slate-800">DATABASE SUPPLIER</strong> (Database supplier / distributor / vendor)
                   <br />
-                  4. <strong className="text-slate-800">DATA_PEMASOK</strong> (Database supplier)
+                  4. <strong className="text-slate-800">HISTORY PEMBELIAN</strong> (Log riwayat barang masuk / pembelian)
                   <br />
-                  5. <strong className="text-slate-800">RINGKASAN_GUDANG</strong> (KPI stok &amp; nilai aset modal)
+                  5. <strong className="text-slate-800">HISTORY PENJUALAN</strong> (Log riwayat barang keluar / penjualan)
+                  <br />
+                  6. <strong className="text-slate-800">SALES</strong> (Daftar tim sales)
                 </p>
                 <div>
                   <label htmlFor="sheet-name" className="block text-xs font-bold text-slate-700 mb-1">
