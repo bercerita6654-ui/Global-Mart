@@ -1,0 +1,8 @@
+{
+  "name": "GLOBAL MART - DASHBOARD",
+  "description": "Aplikasi pencatatan barang keluar masuk terintegrasi Google Sheets API secara real-time dengan dashboard analitik dan laporan otomatis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
