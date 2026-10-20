@@ -663,6 +663,7 @@ export const AKUN_SHEET_HEADERS = [
   'Password',
   'Nama Lengkap',
   'Role / Jabatan',
+  'Akses Menu',
   'Email',
   'No. WhatsApp',
   'Status',
@@ -671,12 +672,14 @@ export const AKUN_SHEET_HEADERS = [
 ];
 
 export function userAccountToRow(u: import('../types/inventory.js').UserAccount): (string | number)[] {
+  const menusStr = u.allowedMenus && u.allowedMenus.length > 0 ? u.allowedMenus.join(',') : 'ALL';
   return [
     u.id || '-',
     u.username || '-',
     u.password || '-',
     u.name || '-',
     u.role || 'Petugas Gudang',
+    menusStr,
     u.email || '-',
     u.phone || '-',
     u.status || 'Aktif',

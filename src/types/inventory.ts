@@ -23,6 +23,7 @@ export interface UserAccount {
   password?: string; // Password atau PIN akun
   name: string; // Nama Lengkap Pengguna
   role: UserRole; // Role / Jabatan
+  allowedMenus?: string[]; // Menu-menu yang diizinkan diakses (atau ['ALL'] untuk full akses)
   email?: string; // Email pengguna
   phone?: string; // No WhatsApp / Telepon
   status: 'Aktif' | 'Nonaktif'; // Status Akun

@@ -1048,6 +1048,7 @@ export function parseRowsToUserAccounts(headers: string[], rows: any[][]): UserA
   const hPassCol = findCol(/password|kata.*sandi|^pin\b|pass/i);
   const hNameCol = findCol(/nama.*lengkap|^nama\b|full.*name/i);
   const hRoleCol = findCol(/role|jabatan|hak.*akses|level/i);
+  const hMenuCol = findCol(/menu|akses|permission/i);
   const hEmailCol = findCol(/email|surel/i);
   const hPhoneCol = findCol(/wa|whatsapp|telepon|hp|phone|kontak/i);
   const hStatusCol = findCol(/status|aktif/i);
@@ -1071,13 +1072,14 @@ export function parseRowsToUserAccounts(headers: string[], rows: any[][]): UserA
       : '';
     let name = hNameCol !== -1 && row[hNameCol] ? String(row[hNameCol]).trim() : '';
     let roleStr = hRoleCol !== -1 && row[hRoleCol] ? String(row[hRoleCol]).trim() : 'Petugas Gudang';
+    let menuStr = hMenuCol !== -1 && row[hMenuCol] ? String(row[hMenuCol]).trim() : (row[5] ? String(row[5]).trim() : 'ALL');
     let email = hEmailCol !== -1 && row[hEmailCol] ? String(row[hEmailCol]).trim() : undefined;
     let phone = hPhoneCol !== -1 && row[hPhoneCol] ? String(row[hPhoneCol]).trim() : undefined;
     let statusStr = hStatusCol !== -1 && row[hStatusCol] ? String(row[hStatusCol]).trim() : 'Aktif';
     let lastLogin = hLastLoginCol !== -1 && row[hLastLoginCol] ? String(row[hLastLoginCol]).trim() : undefined;
     let notes = hNotesCol !== -1 && row[hNotesCol] ? String(row[hNotesCol]).trim() : undefined;
 
-    // Fallback based on column index (0: ID, 1: Username, 2: Password, 3: Name, etc.)
+    // Fallback based on column index (0: ID, 1: Username, 2: Password, 3: Name, 4: Role, 5: Menu)
     if (!username && row[1]) username = String(row[1]).trim();
     if (!password && row[2]) password = String(row[2]).trim();
     if (!name && row[3]) name = String(row[3]).trim();
@@ -1096,6 +1098,11 @@ export function parseRowsToUserAccounts(headers: string[], rows: any[][]): UserA
     else if (rLower.includes('sales')) role = 'Sales';
     else role = 'Petugas Gudang';
 
+    let allowedMenus: string[] = ['ALL'];
+    if (menuStr && menuStr.toUpperCase() !== 'ALL' && menuStr !== '-') {
+      allowedMenus = menuStr.split(',').map((s) => s.trim()).filter(Boolean);
+    }
+
     const status: 'Aktif' | 'Nonaktif' = statusStr.toLowerCase().includes('non') ? 'Nonaktif' : 'Aktif';
 
     accounts.push({
@@ -1104,6 +1111,7 @@ export function parseRowsToUserAccounts(headers: string[], rows: any[][]): UserA
       password: password && password !== '-' ? password : '123',
       name: name || username,
       role,
+      allowedMenus,
       email: email && email !== '-' ? email : undefined,
       phone: phone && phone !== '-' ? phone : undefined,
       status,

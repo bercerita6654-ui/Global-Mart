@@ -57,6 +57,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
   const [formPhone, setFormPhone] = useState('');
   const [formStatus, setFormStatus] = useState<'Aktif' | 'Nonaktif'>('Aktif');
   const [formNotes, setFormNotes] = useState('');
+  const [formAllowedMenus, setFormAllowedMenus] = useState<string[]>(['ALL']);
 
   const openAddModal = () => {
     const nextNum = accounts.length + 1;
@@ -70,6 +71,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
     setFormPhone('');
     setFormStatus('Aktif');
     setFormNotes('');
+    setFormAllowedMenus(['ALL']);
     setEditingAccount(null);
     setIsModalOpen(true);
   };
@@ -84,6 +86,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
     setFormPhone(acc.phone || '');
     setFormStatus(acc.status);
     setFormNotes(acc.notes || '');
+    setFormAllowedMenus(acc.allowedMenus && acc.allowedMenus.length > 0 ? acc.allowedMenus : ['ALL']);
     setEditingAccount(acc);
     setIsModalOpen(true);
   };
@@ -99,6 +102,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
         password: formPassword.trim() || editingAccount.password || '123',
         name: formName.trim(),
         role: formRole,
+        allowedMenus: formAllowedMenus,
         email: formEmail.trim() || undefined,
         phone: formPhone.trim() || undefined,
         status: formStatus,
@@ -111,6 +115,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
         password: formPassword.trim() || '123',
         name: formName.trim(),
         role: formRole,
+        allowedMenus: formAllowedMenus,
         email: formEmail.trim() || undefined,
         phone: formPhone.trim() || undefined,
         status: formStatus,
@@ -648,32 +653,59 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
-                  Status Akun
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
+                  Otoritas Akses Menu
                 </label>
-                <div className="flex space-x-3">
-                  <label className="flex items-center space-x-2 text-xs font-bold text-slate-800">
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                  <label className="flex items-center space-x-2 text-xs font-extrabold text-emerald-800 pb-2 border-b border-slate-200">
                     <input
-                      type="radio"
-                      name="account_status"
-                      value="Aktif"
-                      checked={formStatus === 'Aktif'}
-                      onChange={() => setFormStatus('Aktif')}
-                      className="text-emerald-600 focus:ring-emerald-500"
+                      type="checkbox"
+                      checked={formAllowedMenus.includes('ALL')}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFormAllowedMenus(['ALL']);
+                        } else {
+                          setFormAllowedMenus(['dashboard', 'master', 'customers', 'suppliers', 'history', 'reports']);
+                        }
+                      }}
+                      className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
                     />
-                    <span>Aktif (Bisa Login)</span>
+                    <span>Full Akses (Semua Menu)</span>
                   </label>
-                  <label className="flex items-center space-x-2 text-xs font-bold text-slate-800">
-                    <input
-                      type="radio"
-                      name="account_status"
-                      value="Nonaktif"
-                      checked={formStatus === 'Nonaktif'}
-                      onChange={() => setFormStatus('Nonaktif')}
-                      className="text-rose-600 focus:ring-rose-500"
-                    />
-                    <span>Nonaktif</span>
-                  </label>
+
+                  {!formAllowedMenus.includes('ALL') && (
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      {[
+                        { id: 'dashboard', label: 'Dashboard' },
+                        { id: 'master', label: 'Stock List' },
+                        { id: 'customers', label: 'Database Customer' },
+                        { id: 'suppliers', label: 'Database Supplier' },
+                        { id: 'history', label: 'Riwayat Mutasi' },
+                        { id: 'reports', label: 'Laporan' },
+                        { id: 'accounts', label: 'Database Akun' },
+                      ].map((m) => {
+                        const checked = formAllowedMenus.includes(m.id);
+                        return (
+                          <label key={m.id} className="flex items-center space-x-2 text-xs font-semibold text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFormAllowedMenus([...formAllowedMenus, m.id]);
+                                } else {
+                                  const updated = formAllowedMenus.filter((item) => item !== m.id);
+                                  setFormAllowedMenus(updated.length > 0 ? updated : ['dashboard']);
+                                }
+                              }}
+                              className="w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500"
+                            />
+                            <span>{m.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
 
