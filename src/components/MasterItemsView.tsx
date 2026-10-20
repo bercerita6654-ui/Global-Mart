@@ -532,7 +532,7 @@ export const MasterItemsView: React.FC<MasterItemsViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredItems.map((item) => {
+                filteredItems.map((item, idx) => {
                   const stockGudang =
                     item.stockGudang ??
                     item.stockGudangUtama ??
@@ -551,7 +551,7 @@ export const MasterItemsView: React.FC<MasterItemsViewProps> = ({
                   const merk = item.merk || item.brand || '-';
 
                   return (
-                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
+                    <tr key={`${item.id}-${idx}`} className="hover:bg-slate-50/80 transition-colors group">
                       {/* Kolom 1: SKU */}
                       <td className="px-3 py-3 whitespace-nowrap">
                         <button

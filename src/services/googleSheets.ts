@@ -1090,13 +1090,10 @@ export function parseRowsToUserAccounts(headers: string[], rows: any[][]): UserA
     if (!username && !name) return;
 
     // Validate role
-    let role: UserRole = 'Petugas Gudang';
+    let role: UserRole = 'Purchasing';
     const rLower = roleStr.toLowerCase();
     if (rLower.includes('admin')) role = 'Admin';
-    else if (rLower.includes('spv') || rLower.includes('supervis')) role = 'Supervisor';
-    else if (rLower.includes('kasir')) role = 'Kasir';
-    else if (rLower.includes('sales')) role = 'Sales';
-    else role = 'Petugas Gudang';
+    else role = 'Purchasing';
 
     let allowedMenus: string[] = ['ALL'];
     if (menuStr && menuStr.toUpperCase() !== 'ALL' && menuStr !== '-') {

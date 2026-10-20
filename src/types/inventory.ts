@@ -15,7 +15,7 @@ export const SALES_REPRESENTATIVES = [
 
 export const SALES_PERSONS = SALES_REPRESENTATIVES;
 
-export type UserRole = 'Admin' | 'Supervisor' | 'Petugas Gudang' | 'Kasir' | 'Sales';
+export type UserRole = 'Admin' | 'Purchasing' | 'Super User';
 
 export interface UserAccount {
   id: string; // ID Pengguna, misal USR-001

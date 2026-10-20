@@ -9,7 +9,7 @@ import {
   RefreshCw,
   Eye,
 } from 'lucide-react';
-import type { Item, Transaction, StockSummary, SpreadsheetConfig } from '../types/inventory.js';
+import type { Item, Transaction, StockSummary, SpreadsheetConfig, UserAccount } from '../types/inventory.js';
 import { formatNumber, getStockGudang, getStockPiranha, getStockToko } from '../utils/inventory.js';
 import { SkuDetailModal } from './SkuDetailModal.js';
 
@@ -18,6 +18,7 @@ interface DashboardViewProps {
   transactions?: Transaction[];
   summary?: StockSummary;
   spreadsheetConfig?: SpreadsheetConfig | null;
+  activeUser?: UserAccount | null;
   onOpenTransactionModal: (type: 'IN' | 'OUT', preselectedItemId?: string) => void;
   onOpenAddItemModal?: () => void;
   onOpenSpreadsheetModal?: () => void;
@@ -30,6 +31,7 @@ interface DashboardViewProps {
 export const DashboardView: React.FC<DashboardViewProps> = ({
   items,
   spreadsheetConfig,
+  activeUser,
   onOpenTransactionModal,
   onOpenSpreadsheetModal,
   onQuickSync,
@@ -104,54 +106,56 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Status Bar inside Banner */}
-        <div className="relative z-10 mt-5 pt-4 border-t border-slate-700/60 flex flex-wrap items-center justify-between text-xs text-slate-300 gap-3">
-          <div className="flex items-center space-x-2">
-            <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
-            {spreadsheetConfig?.spreadsheetId ? (
-              <span>
-                Database Aktif:{' '}
-                <strong className="text-white">{spreadsheetConfig.spreadsheetTitle}</strong>
-                {spreadsheetConfig.lastSyncedAt && ` (Sinkronisasi: ${spreadsheetConfig.lastSyncedAt})`}
-              </span>
-            ) : (
-              <span className="text-amber-300">
-                Spreadsheet belum terhubung. Data sementara tersimpan lokal.
-              </span>
-            )}
-          </div>
+        {/* Status Bar inside Banner (Only for server account) */}
+        {activeUser?.username === 'server' && (
+          <div className="relative z-10 mt-5 pt-4 border-t border-slate-700/60 flex flex-wrap items-center justify-between text-xs text-slate-300 gap-3">
+            <div className="flex items-center space-x-2">
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
+              {spreadsheetConfig?.spreadsheetId ? (
+                <span>
+                  Database Aktif:{' '}
+                  <strong className="text-white">{spreadsheetConfig.spreadsheetTitle}</strong>
+                  {spreadsheetConfig.lastSyncedAt && ` (Sinkronisasi: ${spreadsheetConfig.lastSyncedAt})`}
+                </span>
+              ) : (
+                <span className="text-amber-300">
+                  Spreadsheet belum terhubung. Data sementara tersimpan lokal.
+                </span>
+              )}
+            </div>
 
-          <div className="flex items-center space-x-2">
-            {spreadsheetConfig?.spreadsheetId ? (
-              <>
+            <div className="flex items-center space-x-2">
+              {spreadsheetConfig?.spreadsheetId ? (
+                <>
+                  <button
+                    onClick={onQuickSync}
+                    disabled={isSyncing}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-xs font-semibold"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
+                    <span>{isSyncing ? 'Menyinkronkan...' : 'Sinkronkan'}</span>
+                  </button>
+                  <a
+                    href={spreadsheetConfig.spreadsheetUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-1 px-2.5 py-1 text-emerald-300 hover:text-emerald-200"
+                  >
+                    <span>Buka Sheet</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                </>
+              ) : onOpenSpreadsheetModal ? (
                 <button
-                  onClick={onQuickSync}
-                  disabled={isSyncing}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-xs font-semibold"
+                  onClick={onOpenSpreadsheetModal}
+                  className="px-3 py-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-bold transition-colors cursor-pointer"
                 >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                  <span>{isSyncing ? 'Menyinkronkan...' : 'Sinkronkan'}</span>
+                  Hubungkan Google Sheets
                 </button>
-                <a
-                  href={spreadsheetConfig.spreadsheetUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center space-x-1 px-2.5 py-1 text-emerald-300 hover:text-emerald-200"
-                >
-                  <span>Buka Sheet</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </>
-            ) : onOpenSpreadsheetModal ? (
-              <button
-                onClick={onOpenSpreadsheetModal}
-                className="px-3 py-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-bold transition-colors cursor-pointer"
-              >
-                Hubungkan Google Sheets
-              </button>
-            ) : null}
+              ) : null}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Detail SKU Barang Main Table */}
@@ -225,14 +229,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredItems.map((item) => {
+                filteredItems.map((item, idx) => {
                   const stockGudang = getStockGudang(item);
                   const stockPiranha = getStockPiranha(item);
                   const stockToko = getStockToko(item);
                   const totalStock = stockGudang + stockPiranha + stockToko;
 
                   return (
-                    <tr key={item.id} className="hover:bg-slate-50/70 transition-colors">
+                    <tr key={`${item.id}-${idx}`} className="hover:bg-slate-50/70 transition-colors">
                       {/* 1. Kode SKU */}
                       <td className="px-5 py-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
                         <button

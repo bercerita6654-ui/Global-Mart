@@ -386,9 +386,9 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredCustomers.map((cust) => {
+                filteredCustomers.map((cust, idx) => {
                   return (
-                    <tr key={cust.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr key={`${cust.id}-${idx}`} className="hover:bg-slate-50/80 transition-colors">
                       <td className="px-4 py-3.5">
                         <span className="font-mono font-bold text-slate-600 block text-[11px]">{cust.code}</span>
                         <p className="font-bold text-slate-900 text-sm">{cust.name}</p>

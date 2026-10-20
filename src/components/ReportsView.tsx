@@ -389,7 +389,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ items, transactions, s
                 </tr>
               ) : (
                 filteredSkuReports.map((r, idx) => (
-                  <tr key={r.item.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={`${r.item.id}-${idx}`} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-3 py-3 text-center text-slate-400 font-mono">{idx + 1}</td>
                     <td className="px-4 py-3 font-mono font-bold text-slate-900 whitespace-nowrap">
                       {r.item.sku}
@@ -494,7 +494,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ items, transactions, s
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
             {fastMovingSkus.map((f, idx) => (
               <div
-                key={f.item.id}
+                key={`${f.item.id}-${idx}`}
                 className="p-3 bg-slate-50 rounded-xl border border-slate-200/70 text-xs space-y-1.5"
               >
                 <div className="flex items-center justify-between">

@@ -255,8 +255,8 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                filtered.map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
+                filtered.map((s, idx) => (
+                  <tr key={`${s.id}-${idx}`} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-4 py-3 font-mono font-bold text-indigo-700 whitespace-nowrap">
                       {s.code}
                     </td>

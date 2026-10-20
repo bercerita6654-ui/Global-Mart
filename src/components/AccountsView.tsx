@@ -52,7 +52,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
   const [formUsername, setFormUsername] = useState('');
   const [formPassword, setFormPassword] = useState('');
   const [formName, setFormName] = useState('');
-  const [formRole, setFormRole] = useState<UserRole>('Petugas Gudang');
+  const [formRole, setFormRole] = useState<UserRole>('Purchasing');
   const [formEmail, setFormEmail] = useState('');
   const [formPhone, setFormPhone] = useState('');
   const [formStatus, setFormStatus] = useState<'Aktif' | 'Nonaktif'>('Aktif');
@@ -66,7 +66,7 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
     setFormUsername('');
     setFormPassword('');
     setFormName('');
-    setFormRole('Petugas Gudang');
+    setFormRole('Purchasing');
     setFormEmail('');
     setFormPhone('');
     setFormStatus('Aktif');
@@ -148,24 +148,20 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
   });
 
   const countAdmin = accounts.filter((a) => a.role === 'Admin').length;
-  const countGudang = accounts.filter((a) => a.role === 'Petugas Gudang').length;
-  const countKasir = accounts.filter((a) => a.role === 'Kasir').length;
-  const countSpv = accounts.filter((a) => a.role === 'Supervisor').length;
-  const countSales = accounts.filter((a) => a.role === 'Sales').length;
+  const countPurchasing = accounts.filter((a) => a.role === 'Purchasing').length;
+  const countSuperUser = accounts.filter((a) => a.role === 'Super User').length;
   const countActive = accounts.filter((a) => a.status === 'Aktif').length;
 
   const roleBadgeStyle = (role: string) => {
     switch (role) {
+      case 'Super User':
+        return 'bg-purple-50 text-purple-800 border-purple-300';
       case 'Admin':
         return 'bg-emerald-50 text-emerald-800 border-emerald-300';
-      case 'Supervisor':
+      case 'Purchasing':
         return 'bg-blue-50 text-blue-800 border-blue-300';
-      case 'Kasir':
-        return 'bg-purple-50 text-purple-800 border-purple-300';
-      case 'Sales':
-        return 'bg-rose-50 text-rose-800 border-rose-300';
       default:
-        return 'bg-amber-50 text-amber-800 border-amber-300';
+        return 'bg-slate-50 text-slate-800 border-slate-300';
     }
   };
 
@@ -260,33 +256,21 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
         </div>
 
         <div className="p-3.5 bg-white border border-emerald-200 rounded-2xl shadow-xs">
-          <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">Admin Utama</span>
+          <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">Admin</span>
           <p className="text-xl font-black text-emerald-900 mt-1">{countAdmin}</p>
-          <span className="text-[10px] text-slate-500">Super Administrator</span>
-        </div>
-
-        <div className="p-3.5 bg-white border border-amber-200 rounded-2xl shadow-xs">
-          <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider block">Staff Gudang</span>
-          <p className="text-xl font-black text-amber-900 mt-1">{countGudang}</p>
-          <span className="text-[10px] text-slate-500">Penerimaan & Rak</span>
-        </div>
-
-        <div className="p-3.5 bg-white border border-purple-200 rounded-2xl shadow-xs">
-          <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider block">Kasir Toko</span>
-          <p className="text-xl font-black text-purple-900 mt-1">{countKasir}</p>
-          <span className="text-[10px] text-slate-500">POS & Penjualan</span>
+          <span className="text-[10px] text-slate-500">Administrator Utama</span>
         </div>
 
         <div className="p-3.5 bg-white border border-blue-200 rounded-2xl shadow-xs">
-          <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider block">Supervisor</span>
-          <p className="text-xl font-black text-blue-900 mt-1">{countSpv}</p>
-          <span className="text-[10px] text-slate-500">Audit & Logistik</span>
+          <span className="text-[11px] font-bold text-blue-700 uppercase tracking-wider block">Purchasing</span>
+          <p className="text-xl font-black text-blue-900 mt-1">{countPurchasing}</p>
+          <span className="text-[10px] text-slate-500">Purchasing & Staff</span>
         </div>
 
-        <div className="p-3.5 bg-white border border-rose-200 rounded-2xl shadow-xs">
-          <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider block">Sales Tim</span>
-          <p className="text-xl font-black text-rose-900 mt-1">{countSales}</p>
-          <span className="text-[10px] text-slate-500">Mitra & Pesanan</span>
+        <div className="p-3.5 bg-white border border-purple-200 rounded-2xl shadow-xs">
+          <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider block">Super User</span>
+          <p className="text-xl font-black text-purple-900 mt-1">{countSuperUser}</p>
+          <span className="text-[10px] text-slate-500">Akses Penuh Server</span>
         </div>
       </div>
 
@@ -329,47 +313,25 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
           </button>
           <button
             type="button"
-            onClick={() => setSelectedRoleFilter('Petugas Gudang')}
+            onClick={() => setSelectedRoleFilter('Purchasing')}
             className={`px-3 py-1.5 rounded-xl border transition-all ${
-              selectedRoleFilter === 'Petugas Gudang'
-                ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-            }`}
-          >
-            Gudang ({countGudang})
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedRoleFilter('Kasir')}
-            className={`px-3 py-1.5 rounded-xl border transition-all ${
-              selectedRoleFilter === 'Kasir'
-                ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
-                : 'bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100'
-            }`}
-          >
-            Kasir ({countKasir})
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelectedRoleFilter('Supervisor')}
-            className={`px-3 py-1.5 rounded-xl border transition-all ${
-              selectedRoleFilter === 'Supervisor'
+              selectedRoleFilter === 'Purchasing'
                 ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
                 : 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100'
             }`}
           >
-            Supervisor ({countSpv})
+            Purchasing ({countPurchasing})
           </button>
           <button
             type="button"
-            onClick={() => setSelectedRoleFilter('Sales')}
+            onClick={() => setSelectedRoleFilter('Super User')}
             className={`px-3 py-1.5 rounded-xl border transition-all ${
-              selectedRoleFilter === 'Sales'
-                ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
-                : 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100'
+              selectedRoleFilter === 'Super User'
+                ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                : 'bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100'
             }`}
           >
-            Sales ({countSales})
+            Super User ({countSuperUser})
           </button>
         </div>
       </div>
@@ -401,12 +363,12 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                filteredAccounts.map((acc) => {
+                filteredAccounts.map((acc, idx) => {
                   const isViewingPassword = !!showPasswordMap[acc.id];
                   const isCurrentActive = activeUser?.id === acc.id || activeUser?.username === acc.username;
 
                   return (
-                    <tr key={acc.id} className={`hover:bg-slate-50 transition-colors ${isCurrentActive ? 'bg-emerald-50/40' : ''}`}>
+                    <tr key={`${acc.id}-${idx}`} className={`hover:bg-slate-50 transition-colors ${isCurrentActive ? 'bg-emerald-50/40' : ''}`}>
                       <td className="px-4 py-3.5 whitespace-nowrap">
                         <span className="font-mono font-bold text-slate-500 text-[11px] block">{acc.id}</span>
                         <div className="flex items-center space-x-1.5 mt-0.5">
@@ -589,7 +551,14 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
                   required
                   placeholder="cth: Budi Santoso"
                   value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormName(val);
+                    if (!editingAccount) {
+                      const slug = val.trim().toUpperCase().replace(/\s+/g, '-').replace(/[^A-Z0-9-]/g, '');
+                      setFormId(slug ? `USR-${slug}` : 'USR-NEW');
+                    }
+                  }}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900"
                 />
               </div>
@@ -616,11 +585,9 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
                     onChange={(e) => setFormRole(e.target.value as UserRole)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900"
                   >
-                    <option value="Admin">Admin (Full Akses)</option>
-                    <option value="Petugas Gudang">Petugas Gudang</option>
-                    <option value="Kasir">Kasir</option>
-                    <option value="Supervisor">Supervisor</option>
-                    <option value="Sales">Sales</option>
+                    <option value="Admin">Admin</option>
+                    <option value="Purchasing">Purchasing</option>
+                    <option value="Super User">Super User</option>
                   </select>
                 </div>
               </div>

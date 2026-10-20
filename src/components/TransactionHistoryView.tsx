@@ -461,8 +461,8 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
                   </td>
                 </tr>
               ) : (
-                filtered.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
+                filtered.map((tx, idx) => (
+                  <tr key={`${tx.id}-${idx}`} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-4 py-3 font-mono font-bold text-slate-600 whitespace-nowrap">
                       {tx.id}
                     </td>

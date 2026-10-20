@@ -584,8 +584,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 }}
                 className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold text-slate-800 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
               >
-                {filteredItems.map((item) => (
-                  <option key={item.id} value={item.id}>
+                {filteredItems.map((item, idx) => (
+                  <option key={`${item.id}-${idx}`} value={item.id}>
                     [{item.sku}] {item.name} — Stok Saat Ini: {item.currentStock} {item.unit}
                   </option>
                 ))}
@@ -966,8 +966,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {cartItems.map((item) => (
-                          <tr key={item.id} className="hover:bg-slate-50/80">
+                        {cartItems.map((item, idx) => (
+                          <tr key={`${item.id}-${idx}`} className="hover:bg-slate-50/80">
                             <td className="px-3 py-2.5">
                               <p className="font-extrabold text-slate-900">{item.itemName}</p>
                               <p className="text-[10px] font-mono text-slate-500">
@@ -1075,8 +1075,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     className="w-full px-3 py-2 bg-indigo-50/80 border border-indigo-300 rounded-xl text-xs font-semibold text-indigo-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="">-- Pilih dari Database Supplier ({suppliers.length} Supplier) --</option>
-                    {suppliers.map((s) => (
-                      <option key={s.id} value={s.name}>
+                    {suppliers.map((s, idx) => (
+                      <option key={`${s.id}-${idx}`} value={s.name}>
                         [{s.code}] {s.name} • {s.city || 'Indonesia'} {s.contactPerson ? `(PIC: ${s.contactPerson})` : ''}
                       </option>
                     ))}
@@ -1110,8 +1110,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     className="w-full px-3 py-2 bg-emerald-50/80 border border-emerald-300 rounded-xl text-xs font-semibold text-emerald-900 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="">-- Pilih Customer ({connectedCustomersList.length} di Database Penjualan) --</option>
-                    {connectedCustomersList.map((c) => (
-                      <option key={c.id} value={c.name}>
+                    {connectedCustomersList.map((c, idx) => (
+                      <option key={`${c.id}-${idx}`} value={c.name}>
                         {c.code ? `[${c.code}] ` : ''}{c.name} {c.type ? `(${c.type})` : ''} • Sales: {c.salesPerson || 'Belum ditugaskan'} {c.salesCount > 0 ? `(${c.salesCount}x Transaksi)` : ''}
                       </option>
                     ))}
@@ -1196,9 +1196,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 </span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                {activeSalesList.map((sales) => (
+                {activeSalesList.map((sales, idx) => (
                   <button
-                    key={sales}
+                    key={`${sales}-${idx}`}
                     type="button"
                     onClick={() => setSalesPerson(sales)}
                     className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border text-left transition-all truncate ${
@@ -1218,8 +1218,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   onChange={(e) => setSalesPerson(e.target.value)}
                   className="w-full px-3 py-1.5 bg-white border border-rose-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-rose-500"
                 >
-                  {activeSalesList.map((s) => (
-                    <option key={s} value={s}>
+                  {activeSalesList.map((s, idx) => (
+                    <option key={`${s}-${idx}`} value={s}>
                       Sales: {s}
                     </option>
                   ))}
@@ -1456,8 +1456,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
                     {cartItems.length > 0 ? (
-                      cartItems.map((c) => (
-                        <tr key={c.id}>
+                      cartItems.map((c, idx) => (
+                        <tr key={`${c.id}-${idx}`}>
                           <td className="px-3 py-3">
                             <p className="font-extrabold text-slate-900">{c.itemName}</p>
                             <p className="text-[11px] text-slate-500 font-mono">

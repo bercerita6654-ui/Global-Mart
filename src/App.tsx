@@ -361,6 +361,24 @@ export default function App() {
   }, [activeUser]);
 
   useEffect(() => {
+    if (activeTab === 'accounts' && activeUser?.username !== 'server') {
+      setActiveTab('dashboard');
+    }
+  }, [activeTab, activeUser]);
+
+  useEffect(() => {
+    if (activeUser && accounts.length > 0) {
+      const stillExists = accounts.some(
+        (a) => a.id === activeUser.id || a.username.toLowerCase() === activeUser.username.toLowerCase()
+      );
+      if (!stillExists) {
+        setActiveUser(null);
+        showToast('error', 'Akun Anda sudah dihapus atau tidak terdaftar lagi pada sheet AKUN. Anda telah keluar otomatis.');
+      }
+    }
+  }, [accounts, activeUser]);
+
+  useEffect(() => {
     if (spreadsheetConfig) {
       localStorage.setItem(STORAGE_KEYS.SHEET_CONFIG, JSON.stringify(spreadsheetConfig));
     }
@@ -1512,49 +1530,51 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         {/* Main Content Area */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          {/* Target Google Spreadsheet Sync Banner */}
-          <div className="mb-6 bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-950 rounded-3xl p-4 sm:p-5 text-white shadow-xl border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start sm:items-center space-x-3.5">
-              <div className="p-2.5 bg-emerald-500/20 border border-emerald-400/30 rounded-2xl text-emerald-300 shrink-0">
-                <FileSpreadsheet className="w-6 h-6" />
-              </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-extrabold text-sm sm:text-base text-white">
-                    Google Spreadsheet Target
-                  </span>
-                  <span className="bg-emerald-500/30 text-emerald-200 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border border-emerald-400/40">
-                    ID: {TARGET_SPREADSHEET_ID}
-                  </span>
-                  {spreadsheetConfig?.lastSyncedAt ? (
-                    <span className="text-[11px] text-emerald-300/90 font-medium">
-                      (Terakhir Disinkronkan: {spreadsheetConfig.lastSyncedAt})
-                    </span>
-                  ) : (
-                    <span className="text-[11px] text-amber-300 font-medium">
-                      (Siap Disimpan)
-                    </span>
-                  )}
+          {/* Target Google Spreadsheet Sync Banner (Only for server account) */}
+          {activeUser?.username === 'server' && (
+            <div className="mb-6 bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-950 rounded-3xl p-4 sm:p-5 text-white shadow-xl border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center space-x-3.5">
+                <div className="p-2.5 bg-emerald-500/20 border border-emerald-400/30 rounded-2xl text-emerald-300 shrink-0">
+                  <FileSpreadsheet className="w-6 h-6" />
                 </div>
-                <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                  Menyimpan otomatis seluruh data master produk, stok 3 gudang, riwayat mutasi masuk &amp; keluar, database customer, serta supplier langsung ke spreadsheet Anda.
-                </p>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-extrabold text-sm sm:text-base text-white">
+                      Google Spreadsheet Target
+                    </span>
+                    <span className="bg-emerald-500/30 text-emerald-200 text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border border-emerald-400/40">
+                      ID: {TARGET_SPREADSHEET_ID}
+                    </span>
+                    {spreadsheetConfig?.lastSyncedAt ? (
+                      <span className="text-[11px] text-emerald-300/90 font-medium">
+                        (Terakhir Disinkronkan: {spreadsheetConfig.lastSyncedAt})
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-amber-300 font-medium">
+                        (Siap Disimpan)
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Menyimpan otomatis seluruh data master produk, stok 3 gudang, riwayat mutasi masuk &amp; keluar, database customer, serta supplier langsung ke spreadsheet Anda.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <a
+                  href={spreadsheetConfig?.spreadsheetUrl || TARGET_SPREADSHEET_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors border border-white/10"
+                  title="Buka Google Sheets di tab baru"
+                >
+                  <span>Buka Sheet</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-emerald-300" />
+                </a>
               </div>
             </div>
-
-            <div className="flex flex-wrap items-center gap-2 shrink-0">
-              <a
-                href={spreadsheetConfig?.spreadsheetUrl || TARGET_SPREADSHEET_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center space-x-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors border border-white/10"
-                title="Buka Google Sheets di tab baru"
-              >
-                <span>Buka Sheet</span>
-                <ExternalLink className="w-3.5 h-3.5 text-emerald-300" />
-              </a>
-            </div>
-          </div>
+          )}
 
         {activeTab === 'dashboard' && (
           <DashboardView
@@ -1562,6 +1582,7 @@ export default function App() {
             transactions={transactions}
             summary={summary}
             spreadsheetConfig={spreadsheetConfig}
+            activeUser={activeUser}
             onOpenTransactionModal={openTransactionModal}
             onOpenAddItemModal={() => {
               setActiveTab('master');
