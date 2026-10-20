@@ -611,6 +611,18 @@ export const INITIAL_SUPPLIERS: Supplier[] = [
 
 export const INITIAL_ACCOUNTS: UserAccount[] = [
   {
+    id: 'USR-SERVER',
+    username: 'server',
+    password: '0000',
+    name: 'Server Administrator',
+    role: 'Admin',
+    email: 'server@globalmart.id',
+    phone: '081111222233',
+    status: 'Aktif',
+    lastLogin: '2026-10-20 09:00',
+    notes: 'Akun Server Utama (Kontrol Penuh Hak Akses & Manajemen Akun)',
+  },
+  {
     id: 'USR-001',
     username: 'admin',
     password: 'admin123',
