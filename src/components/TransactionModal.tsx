@@ -19,6 +19,9 @@ import {
   Download,
   Lock,
   FileSpreadsheet,
+  Plus,
+  Trash2,
+  ShoppingCart,
 } from 'lucide-react';
 import type {
   Item,
@@ -43,6 +46,21 @@ import {
 } from '../utils/inventory.js';
 import { generateNotaPdf } from '../utils/pdfGenerator.js';
 
+export interface CartItem {
+  id: string;
+  itemId: string;
+  sku: string;
+  itemName: string;
+  category: string;
+  unit: string;
+  quantity: number;
+  selectedTier: 'eceran' | 'grosir' | 'partai' | 'custom';
+  unitPrice: number;
+  totalPrice: number;
+  currentStock: number;
+  targetWarehouse: WarehouseLocation;
+}
+
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -56,6 +74,7 @@ interface TransactionModalProps {
   initialRecipient?: string;
   defaultOperator?: string;
   onSubmit: (transactionData: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  onSubmitBatch?: (transactionDataList: Array<Omit<Transaction, 'id' | 'createdAt'>>) => Promise<void> | void;
 }
 
 export const TransactionModal: React.FC<TransactionModalProps> = ({
@@ -71,6 +90,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   initialRecipient = '',
   defaultOperator = 'Admin Gudang',
   onSubmit,
+  onSubmitBatch,
 }) => {
   const activeSalesList = salesPersons && salesPersons.length > 0 ? salesPersons : [...SALES_PERSONS];
   const [type, setType] = useState<TransactionType>(defaultType);
@@ -248,6 +268,101 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
   }, [selectedItemId, type]);
 
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+
+  // Reset cart when modal closes or opens fresh
+  useEffect(() => {
+    if (!isOpen) {
+      setCartItems([]);
+      setErrorMsg('');
+      setShowInvoicePreview(false);
+    }
+  }, [isOpen]);
+
+  const handleAddToCart = () => {
+    setErrorMsg('');
+    if (!currentItem) {
+      setErrorMsg('Pilih barang terlebih dahulu.');
+      return;
+    }
+    if (!quantity || quantity <= 0) {
+      setErrorMsg('Jumlah barang harus lebih dari 0.');
+      return;
+    }
+    if (!stockValidation.valid) {
+      setErrorMsg(stockValidation.message || 'Stok tidak mencukupi untuk pengeluaran barang.');
+      return;
+    }
+
+    // Check if item already exists in cart with same tier & price
+    const existingIndex = cartItems.findIndex(
+      (c) => c.itemId === currentItem.id && c.selectedTier === selectedTier && Math.round(c.unitPrice) === Math.round(activeUnitPrice)
+    );
+
+    if (existingIndex !== -1) {
+      const updated = [...cartItems];
+      const newQty = updated[existingIndex].quantity + quantity;
+      if (newQty > currentItem.currentStock) {
+        setErrorMsg(`Total kuantitas di daftar (${newQty} ${currentItem.unit}) melebihi stok yang tersedia (${currentItem.currentStock} ${currentItem.unit}).`);
+        return;
+      }
+      updated[existingIndex].quantity = newQty;
+      updated[existingIndex].totalPrice = newQty * updated[existingIndex].unitPrice;
+      setCartItems(updated);
+    } else {
+      const currentInCart = cartItems
+        .filter((c) => c.itemId === currentItem.id)
+        .reduce((sum, c) => sum + c.quantity, 0);
+      if (currentInCart + quantity > currentItem.currentStock) {
+        setErrorMsg(`Total kuantitas barang ini di daftar (${currentInCart + quantity} ${currentItem.unit}) melebihi stok yang tersedia (${currentItem.currentStock} ${currentItem.unit}).`);
+        return;
+      }
+
+      const newCartItem: CartItem = {
+        id: `cart-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        itemId: currentItem.id,
+        sku: currentItem.sku,
+        itemName: currentItem.name,
+        category: currentItem.category,
+        unit: currentItem.unit,
+        quantity,
+        selectedTier,
+        unitPrice: activeUnitPrice,
+        totalPrice,
+        targetWarehouse,
+        currentStock: currentItem.currentStock,
+      };
+      setCartItems((prev) => [...prev, newCartItem]);
+    }
+
+    // Reset quantity to 1 for next SKU selection
+    setQuantity(1);
+  };
+
+  const handleRemoveFromCart = (cartId: string) => {
+    setCartItems((prev) => prev.filter((c) => c.id !== cartId));
+  };
+
+  const handleUpdateCartQty = (cartId: string, newQty: number) => {
+    if (newQty <= 0) {
+      handleRemoveFromCart(cartId);
+      return;
+    }
+    setCartItems((prev) =>
+      prev.map((c) => {
+        if (c.id === cartId) {
+          if (newQty > c.currentStock) return c;
+          return {
+            ...c,
+            quantity: newQty,
+            totalPrice: newQty * c.unitPrice,
+          };
+        }
+        return c;
+      })
+    );
+  };
+
   if (!isOpen) return null;
 
   // Validation
@@ -255,7 +370,42 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     ? validateStockOut(currentStock, quantity || 0)
     : { valid: true, remainingStock: currentStock + (quantity || 0) };
 
-  const executeSaveTransaction = () => {
+  const executeSaveTransaction = async () => {
+    if (type === 'OUT' && cartItems.length > 0) {
+      const batchList: Array<Omit<Transaction, 'id' | 'createdAt'>> = cartItems.map((cart) => ({
+        date,
+        time,
+        type: 'OUT',
+        itemId: cart.itemId,
+        sku: cart.sku,
+        itemName: cart.itemName,
+        category: cart.category,
+        quantity: cart.quantity,
+        unit: cart.unit,
+        unitPrice: cart.unitPrice,
+        totalPrice: cart.totalPrice,
+        priceTierUsed: cart.selectedTier,
+        targetWarehouse: cart.targetWarehouse || targetWarehouse,
+        recipientOrSupplier: recipientOrSupplier.trim(),
+        salesPerson: salesPerson,
+        paymentMethod: paymentType,
+        creditTerm: paymentType === 'KREDIT' ? creditTerm : undefined,
+        referenceDoc: referenceDoc.trim() || undefined,
+        operator: operator.trim() || 'Admin Gudang',
+        notes: notes.trim() || undefined,
+      }));
+
+      if (onSubmitBatch) {
+        await onSubmitBatch(batchList);
+      } else {
+        for (const itemTx of batchList) {
+          onSubmit(itemTx);
+        }
+      }
+      onClose();
+      return;
+    }
+
     if (!currentItem) return;
     onSubmit({
       date,
@@ -286,21 +436,6 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     e.preventDefault();
     setErrorMsg('');
 
-    if (!currentItem) {
-      setErrorMsg('Pilih barang terlebih dahulu.');
-      return;
-    }
-
-    if (!quantity || quantity <= 0) {
-      setErrorMsg('Jumlah barang harus lebih dari 0.');
-      return;
-    }
-
-    if (type === 'OUT' && !stockValidation.valid) {
-      setErrorMsg(stockValidation.message || 'Stok tidak mencukupi untuk pengeluaran barang.');
-      return;
-    }
-
     if (!recipientOrSupplier.trim()) {
       setErrorMsg(
         type === 'IN'
@@ -311,8 +446,41 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
     }
 
     if (type === 'OUT') {
+      if (cartItems.length > 0) {
+        for (const c of cartItems) {
+          const it = items.find((i) => i.id === c.itemId);
+          if (!it || c.quantity > it.currentStock) {
+            setErrorMsg(`Stok untuk [${c.sku}] ${c.itemName} tidak mencukupi (Tersedia: ${it?.currentStock ?? 0}, di daftar: ${c.quantity}).`);
+            return;
+          }
+        }
+        setShowInvoicePreview(true);
+        return;
+      }
+
+      if (!currentItem) {
+        setErrorMsg('Pilih minimal 1 barang atau tambahkan ke daftar Multi-SKU.');
+        return;
+      }
+      if (!quantity || quantity <= 0) {
+        setErrorMsg('Jumlah barang harus lebih dari 0.');
+        return;
+      }
+      if (!stockValidation.valid) {
+        setErrorMsg(stockValidation.message || 'Stok tidak mencukupi untuk pengeluaran barang.');
+        return;
+      }
+
       setShowInvoicePreview(true);
     } else {
+      if (!currentItem) {
+        setErrorMsg('Pilih barang terlebih dahulu.');
+        return;
+      }
+      if (!quantity || quantity <= 0) {
+        setErrorMsg('Jumlah barang harus lebih dari 0.');
+        return;
+      }
       executeSaveTransaction();
     }
   };
@@ -729,6 +897,151 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
           </div>
 
+          {/* Multi-SKU Add Button and Cart Table for Penjualan */}
+          {type === 'OUT' && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-teal-50/70 border border-teal-200 rounded-xl">
+                <div className="flex items-center space-x-2">
+                  <span className="p-1.5 bg-teal-100 text-teal-800 rounded-lg">
+                    <ShoppingCart className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">
+                      Fitur Multi-SKU Penjualan:
+                    </span>
+                    <span className="text-[11px] text-slate-600">
+                      Ingin menjual beberapa macam produk sekaligus dalam 1 nota? Klik tombol di kanan.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={!stockValidation.valid || !quantity || quantity <= 0}
+                  className={`flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs ${
+                    !stockValidation.valid || !quantity || quantity <= 0
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      : 'bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white shadow-teal-500/20'
+                  }`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>+ Tambah ke Daftar Multi-SKU</span>
+                </button>
+              </div>
+
+              {cartItems.length > 0 && (
+                <div className="p-3.5 bg-white border-2 border-teal-300 rounded-2xl shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <span className="p-1.5 bg-teal-100 text-teal-800 rounded-lg">
+                        <ShoppingCart className="w-4 h-4" />
+                      </span>
+                      <div>
+                        <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wide">
+                          Daftar Barang Multi-SKU ({cartItems.length} Macam SKU)
+                        </h4>
+                        <p className="text-[11px] text-slate-500">
+                          Semua item di bawah akan tercatat dalam 1 nota dan memotong stok masing-masing secara otomatis.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCartItems([])}
+                      className="text-[11px] text-rose-600 hover:text-rose-800 font-bold hover:underline"
+                    >
+                      Hapus Semua
+                    </button>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-700 font-bold uppercase border-b border-slate-200">
+                        <tr>
+                          <th className="px-3 py-2">Barang & SKU</th>
+                          <th className="px-3 py-2 text-center">Tier & Harga</th>
+                          <th className="px-3 py-2 text-center">Kuantitas</th>
+                          <th className="px-3 py-2 text-right">Subtotal</th>
+                          <th className="px-2 py-2 text-center">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {cartItems.map((item) => (
+                          <tr key={item.id} className="hover:bg-slate-50/80">
+                            <td className="px-3 py-2.5">
+                              <p className="font-extrabold text-slate-900">{item.itemName}</p>
+                              <p className="text-[10px] font-mono text-slate-500">
+                                SKU: {item.sku} • {item.category}
+                              </p>
+                            </td>
+                            <td className="px-3 py-2.5 text-center">
+                              <span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-teal-50 text-teal-800 border border-teal-200 uppercase mb-0.5">
+                                {item.selectedTier}
+                              </span>
+                              <p className="font-mono text-xs font-semibold text-slate-800">
+                                {formatRupiah(item.unitPrice)}
+                              </p>
+                            </td>
+                            <td className="px-3 py-2.5 text-center whitespace-nowrap">
+                              <div className="inline-flex items-center space-x-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateCartQty(item.id, item.quantity - 1)}
+                                  className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs"
+                                >
+                                  -
+                                </button>
+                                <span className="font-bold font-mono text-slate-900 px-1 text-xs">
+                                  {item.quantity}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateCartQty(item.id, item.quantity + 1)}
+                                  disabled={item.quantity >= item.currentStock}
+                                  className="w-5 h-5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs disabled:opacity-40"
+                                >
+                                  +
+                                </button>
+                                <span className="text-slate-500 text-[10px]">{item.unit}</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-extrabold font-mono text-emerald-800">
+                              {formatRupiah(item.totalPrice)}
+                            </td>
+                            <td className="px-2 py-2.5 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFromCart(item.id)}
+                                className="p-1 rounded text-rose-500 hover:bg-rose-50 transition-colors"
+                                title="Hapus barang ini"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-slate-50 font-bold text-slate-900 border-t border-slate-200">
+                        <tr>
+                          <td colSpan={2} className="px-3 py-2 text-xs">
+                            Total Ringkasan: <span className="text-teal-700 font-extrabold">{cartItems.length} Produk</span>
+                          </td>
+                          <td className="px-3 py-2 text-center text-xs font-extrabold">
+                            {formatNumber(cartItems.reduce((acc, c) => acc + c.quantity, 0))} item
+                          </td>
+                          <td className="px-3 py-2 text-right font-black font-mono text-emerald-900 text-sm">
+                            {formatRupiah(cartItems.reduce((acc, c) => acc + c.totalPrice, 0))}
+                          </td>
+                          <td></td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Partner & Reference Doc */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -1047,9 +1360,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={type === 'OUT' && !stockValidation.valid}
+              disabled={type === 'OUT' && cartItems.length === 0 && !stockValidation.valid}
               className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white shadow-md transition-all ${
-                type === 'OUT' && !stockValidation.valid
+                type === 'OUT' && cartItems.length === 0 && !stockValidation.valid
                   ? 'bg-slate-300 cursor-not-allowed text-slate-500'
                   : type === 'IN'
                   ? 'bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 shadow-emerald-500/20'
@@ -1057,14 +1370,20 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               }`}
             >
               <Check className="w-4 h-4" />
-              <span>{type === 'IN' ? 'Simpan Barang Masuk' : 'Lanjut'}</span>
+              <span>
+                {type === 'IN'
+                  ? 'Simpan Barang Masuk'
+                  : cartItems.length > 0
+                  ? `Lanjut ke Nota (${cartItems.length} SKU)`
+                  : 'Lanjut ke Nota'}
+              </span>
             </button>
           </div>
         </form>
       </div>
 
       {/* Nota Penjualan Preview Modal upon clicking Lanjut */}
-      {showInvoicePreview && currentItem && (
+      {showInvoicePreview && (cartItems.length > 0 || currentItem) && (
         <div
           role="dialog"
           aria-modal="true"
@@ -1078,7 +1397,11 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 </span>
                 <div>
                   <h3 className="text-lg font-extrabold tracking-tight">Nota Penjualan</h3>
-                  <p className="text-xs text-emerald-200">Pratinjau Nota (Stok belum terpotong sebelum klik Save)</p>
+                  <p className="text-xs text-emerald-200">
+                    {cartItems.length > 0
+                      ? `Pratinjau Multi-SKU (${cartItems.length} Produk) — Stok belum terpotong sebelum klik Save`
+                      : 'Pratinjau Nota (Stok belum terpotong sebelum klik Save)'}
+                  </p>
                 </div>
               </div>
               <button
@@ -1132,27 +1455,51 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-medium text-slate-800">
-                    <tr>
-                      <td className="px-3 py-3">
-                        <p className="font-extrabold text-slate-900">{currentItem.name}</p>
-                        <p className="text-[11px] text-slate-500 font-mono">SKU: {currentItem.sku} • {currentItem.category}</p>
-                      </td>
-                      <td className="px-3 py-3 text-center font-bold">
-                        {formatNumber(quantity)} {currentItem.unit}
-                      </td>
-                      <td className="px-3 py-3 text-right font-mono">
-                        {formatRupiah(activeUnitPrice)}
-                      </td>
-                      <td className="px-3 py-3 text-right font-extrabold text-slate-900 font-mono">
-                        {formatRupiah(totalPrice)}
-                      </td>
-                    </tr>
+                    {cartItems.length > 0 ? (
+                      cartItems.map((c) => (
+                        <tr key={c.id}>
+                          <td className="px-3 py-3">
+                            <p className="font-extrabold text-slate-900">{c.itemName}</p>
+                            <p className="text-[11px] text-slate-500 font-mono">
+                              SKU: {c.sku} • {c.category} • <span className="uppercase text-emerald-700 font-bold">{c.selectedTier}</span>
+                            </p>
+                          </td>
+                          <td className="px-3 py-3 text-center font-bold">
+                            {formatNumber(c.quantity)} {c.unit}
+                          </td>
+                          <td className="px-3 py-3 text-right font-mono">
+                            {formatRupiah(c.unitPrice)}
+                          </td>
+                          <td className="px-3 py-3 text-right font-extrabold text-slate-900 font-mono">
+                            {formatRupiah(c.totalPrice)}
+                          </td>
+                        </tr>
+                      ))
+                    ) : currentItem ? (
+                      <tr>
+                        <td className="px-3 py-3">
+                          <p className="font-extrabold text-slate-900">{currentItem.name}</p>
+                          <p className="text-[11px] text-slate-500 font-mono">SKU: {currentItem.sku} • {currentItem.category}</p>
+                        </td>
+                        <td className="px-3 py-3 text-center font-bold">
+                          {formatNumber(quantity)} {currentItem.unit}
+                        </td>
+                        <td className="px-3 py-3 text-right font-mono">
+                          {formatRupiah(activeUnitPrice)}
+                        </td>
+                        <td className="px-3 py-3 text-right font-extrabold text-slate-900 font-mono">
+                          {formatRupiah(totalPrice)}
+                        </td>
+                      </tr>
+                    ) : null}
                   </tbody>
                   <tfoot>
                     <tr className="border-t-2 border-slate-200 font-extrabold text-sm text-slate-900">
-                      <td colSpan={3} className="px-3 py-4 text-right">TOTAL PEMBAYARAN:</td>
+                      <td colSpan={3} className="px-3 py-4 text-right">
+                        TOTAL PEMBAYARAN ({cartItems.length > 0 ? `${cartItems.length} Produk, ${cartItems.reduce((acc, c) => acc + c.quantity, 0)} item` : `${quantity} item`}):
+                      </td>
                       <td className="px-3 py-4 text-right text-emerald-800 text-base font-black font-mono">
-                        {formatRupiah(totalPrice)}
+                        {formatRupiah(cartItems.length > 0 ? cartItems.reduce((acc, c) => acc + c.totalPrice, 0) : totalPrice)}
                       </td>
                     </tr>
                   </tfoot>
@@ -1184,6 +1531,30 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <button
                   type="button"
                   onClick={() => {
+                    const pdfItems = cartItems.length > 0
+                      ? cartItems.map((c) => ({
+                          itemName: c.itemName,
+                          sku: c.sku,
+                          category: c.category,
+                          quantity: c.quantity,
+                          unit: c.unit,
+                          unitPrice: c.unitPrice,
+                          totalPrice: c.totalPrice,
+                        }))
+                      : currentItem
+                      ? [
+                          {
+                            itemName: currentItem.name,
+                            sku: currentItem.sku,
+                            category: currentItem.category,
+                            quantity,
+                            unit: currentItem.unit,
+                            unitPrice: activeUnitPrice,
+                            totalPrice,
+                          },
+                        ]
+                      : [];
+
                     generateNotaPdf({
                       transactionId: `TRX-OUT-${Date.now().toString().slice(-6)}`,
                       date,
@@ -1194,14 +1565,8 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                       dueDate: calculateDueDate(date, paymentType, creditTerm),
                       referenceDoc,
                       salesPerson,
-                      itemName: currentItem.name,
-                      sku: currentItem.sku,
-                      category: currentItem.category,
-                      quantity,
-                      unit: currentItem.unit,
-                      unitPrice: activeUnitPrice,
-                      totalPrice,
                       notes,
+                      items: pdfItems,
                     });
                   }}
                   className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-colors flex items-center space-x-1.5"

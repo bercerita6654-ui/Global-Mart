@@ -2,6 +2,16 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatRupiah, formatNumber } from './inventory.js';
 
+export interface NotaItemRow {
+  itemName: string;
+  sku: string;
+  category?: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  totalPrice: number;
+}
+
 export interface NotaPdfData {
   transactionId: string;
   date: string;
@@ -12,14 +22,17 @@ export interface NotaPdfData {
   dueDate: string;
   referenceDoc?: string;
   salesPerson?: string;
-  itemName: string;
-  sku: string;
-  category?: string;
-  quantity: number;
-  unit: string;
-  unitPrice: number;
-  totalPrice: number;
   notes?: string;
+  // Multi-item list
+  items?: NotaItemRow[];
+  // Legacy single-item fields
+  itemName?: string;
+  sku?: string;
+  category?: string;
+  quantity?: number;
+  unit?: string;
+  unitPrice?: number;
+  totalPrice?: number;
 }
 
 export function generateNotaPdf(data: NotaPdfData): void {
@@ -117,21 +130,41 @@ export function generateNotaPdf(data: NotaPdfData): void {
   // --- 3. Items Table ---
   const tableStartY = boxTop + boxHeight + 4;
 
+  const itemsList: NotaItemRow[] =
+    data.items && data.items.length > 0
+      ? data.items
+      : [
+          {
+            itemName: data.itemName || '-',
+            sku: data.sku || '-',
+            category: data.category,
+            quantity: data.quantity || 1,
+            unit: data.unit || 'pcs',
+            unitPrice: data.unitPrice || 0,
+            totalPrice: data.totalPrice || 0,
+          },
+        ];
+
+  const grandTotal =
+    data.totalPrice !== undefined && data.totalPrice > 0 && (!data.items || data.items.length <= 1)
+      ? data.totalPrice
+      : itemsList.reduce((acc, it) => acc + (it.totalPrice || it.quantity * it.unitPrice), 0);
+
+  const tableRows = itemsList.map((item, idx) => [
+    String(idx + 1),
+    `${item.itemName}\n[SKU: ${item.sku}${item.category ? ` • ${item.category}` : ''}]`,
+    `${formatNumber(item.quantity)} ${item.unit}`,
+    formatRupiah(item.unitPrice),
+    formatRupiah(item.totalPrice || item.quantity * item.unitPrice),
+  ]);
+
   autoTable(doc, {
     startY: tableStartY,
     margin: { left: leftMargin, right: 14 },
     head: [['No', 'Nama Barang & SKU', 'Kuantitas', 'Harga Satuan', 'Subtotal']],
-    body: [
-      [
-        '1',
-        `${data.itemName}\n[SKU: ${data.sku}${data.category ? ` • ${data.category}` : ''}]`,
-        `${formatNumber(data.quantity)} ${data.unit}`,
-        formatRupiah(data.unitPrice),
-        formatRupiah(data.totalPrice),
-      ],
-    ],
+    body: tableRows,
     foot: [
-      ['', '', '', 'TOTAL PEMBAYARAN:', formatRupiah(data.totalPrice)],
+      ['', '', '', 'TOTAL PEMBAYARAN:', formatRupiah(grandTotal)],
     ],
     theme: 'plain',
     headStyles: {

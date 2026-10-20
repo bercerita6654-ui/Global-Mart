@@ -880,6 +880,111 @@ export default function App() {
     });
   };
 
+  // Batch / Multi-SKU Transaction submission handler
+  const handleBatchTransactionSubmit = async (txDataList: Array<Omit<Transaction, 'id' | 'createdAt'>>) => {
+    if (!txDataList || txDataList.length === 0) return;
+
+    if (txDataList.length === 1) {
+      await handleTransactionSubmit(txDataList[0]);
+      return;
+    }
+
+    let currentItemsState = [...items];
+    const newRecordedTransactions: Transaction[] = [];
+    const baseTimestamp = Date.now();
+
+    for (let index = 0; index < txDataList.length; index++) {
+      const txData = txDataList[index];
+      const targetItem = currentItemsState.find((i) => i.id === txData.itemId);
+      if (!targetItem) continue;
+
+      const newTxId = `TRX-${(baseTimestamp + index).toString().slice(-6)}`;
+      const newTransaction: Transaction = {
+        ...txData,
+        id: newTxId,
+        createdAt: new Date(baseTimestamp + index * 1000).toISOString(),
+      };
+
+      const updatedItem = applyTransactionToItem(targetItem, {
+        type: txData.type,
+        quantity: txData.quantity,
+        targetWarehouse: txData.targetWarehouse,
+      });
+
+      currentItemsState = currentItemsState.map((i) => (i.id === updatedItem.id ? updatedItem : i));
+      newRecordedTransactions.push(newTransaction);
+    }
+
+    if (newRecordedTransactions.length === 0) {
+      showToast('error', 'Tidak ada barang valid untuk diproses.');
+      return;
+    }
+
+    const updatedTransactions = [...newRecordedTransactions, ...transactions];
+    let updatedSales = salesPersons;
+    const firstTx = newRecordedTransactions[0];
+    if (firstTx.salesPerson && !salesPersons.includes(firstTx.salesPerson)) {
+      updatedSales = [...salesPersons, firstTx.salesPerson];
+      setSalesPersons(updatedSales);
+    }
+
+    setItems(currentItemsState);
+    setTransactions(updatedTransactions);
+
+    const totalQty = newRecordedTransactions.reduce((acc, t) => acc + t.quantity, 0);
+    const totalAmount = newRecordedTransactions.reduce((acc, t) => acc + t.totalPrice, 0);
+    const recipient = firstTx.recipientOrSupplier || 'Pelanggan';
+
+    showToast(
+      'success',
+      `Berhasil mencatat Penjualan Multi-SKU (${newRecordedTransactions.length} produk, total ${totalQty} item) untuk ${recipient} sebesar ${formatRupiah(totalAmount)}!`
+    );
+
+    // Auto-sync every recorded transaction row to Google Sheets
+    const spreadsheetId = spreadsheetConfig?.spreadsheetId || TARGET_SPREADSHEET_ID;
+    if (spreadsheetId) {
+      const token = await getAccessToken();
+      if (!token) {
+        showToast(
+          'info',
+          'Data tersimpan di aplikasi! Masuk Akun Google di kanan atas agar otomatis masuk ke Google Sheets.'
+        );
+        return;
+      }
+
+      setIsSyncing(true);
+      try {
+        // Direct append each transaction to HISTORY PENJUALAN
+        for (const tx of newRecordedTransactions) {
+          await appendTransactionToSheet(token, spreadsheetId, tx);
+        }
+
+        // Full sync to update STOCK LIST with all deducted stocks
+        const res = await syncFullDataToSheet(
+          token,
+          spreadsheetId,
+          currentItemsState,
+          updatedTransactions,
+          customers,
+          suppliers,
+          updatedSales
+        );
+
+        if (res.success) {
+          setSpreadsheetConfig((prev) => ({
+            ...prev,
+            lastSyncedAt: new Date().toLocaleTimeString('id-ID'),
+          }));
+          showToast('success', `Otomatis masuk ke spreadsheet pada sheet "HISTORY PENJUALAN" & "STOCK LIST"!`);
+        }
+      } catch (syncErr) {
+        console.warn('Batch auto-sync error:', syncErr);
+      } finally {
+        setIsSyncing(false);
+      }
+    }
+  };
+
   // Add Item Handler (Otomatis masuk ke sheet "STOCK LIST")
   const handleAddItem = async (newItemData: Omit<Item, 'id' | 'lastUpdated'>) => {
     const newItem: Item = {
@@ -1400,6 +1505,7 @@ export default function App() {
         initialRecipient={preselectedRecipient}
         defaultOperator={user?.displayName || 'Petugas Gudang'}
         onSubmit={handleTransactionSubmit}
+        onSubmitBatch={handleBatchTransactionSubmit}
       />
 
       {/* Google Sheets Sync Hub Modal */}
