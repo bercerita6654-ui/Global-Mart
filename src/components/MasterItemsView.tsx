@@ -474,51 +474,46 @@ export const MasterItemsView: React.FC<MasterItemsViewProps> = ({
             <thead className="bg-slate-50 text-slate-700 font-bold uppercase tracking-wider border-b border-slate-200">
               <tr>
                 <th className="px-3 py-3.5 whitespace-nowrap">
-                  <span className="block text-[10px] text-slate-400 font-normal">Kolom 1</span>
                   SKU
                 </th>
                 <th className="px-4 py-3.5 min-w-[180px]">
-                  <span className="block text-[10px] text-slate-400 font-normal">Kolom 3</span>
                   Nama Produk
                 </th>
                 <th className="px-3 py-3.5 whitespace-nowrap">
-                  <span className="block text-[10px] text-slate-400 font-normal">Kolom 7</span>
                   Kategori
                 </th>
                 <th className="px-3 py-3.5 text-center whitespace-nowrap">
-                  <span className="block text-[10px] text-slate-400 font-normal">Kolom 4</span>
                   Unit
                 </th>
                 <th className="px-3 py-3.5 whitespace-nowrap">
-                  <span className="block text-[10px] text-slate-400 font-normal">Kolom 9</span>
                   Merk
                 </th>
                 <th className="px-3 py-3.5 text-right whitespace-nowrap bg-slate-100/60">
-                  <span className="block text-[10px] text-slate-400 font-normal">Kolom 10</span>
+                  <span className="block text-[10px] text-slate-500 font-semibold tracking-wide">HARGA</span>
                   HPP (Modal)
                 </th>
                 <th className="px-3 py-3.5 text-right whitespace-nowrap text-emerald-800 bg-emerald-50/50">
-                  <span className="block text-[10px] text-emerald-600 font-normal">Kolom 13</span>
+                  <span className="block text-[10px] text-emerald-600 font-semibold tracking-wide">HARGA</span>
                   Eceran
                 </th>
                 <th className="px-3 py-3.5 text-right whitespace-nowrap text-indigo-800 bg-indigo-50/50">
-                  <span className="block text-[10px] text-indigo-600 font-normal">Kolom 14</span>
+                  <span className="block text-[10px] text-indigo-600 font-semibold tracking-wide">HARGA</span>
                   Grosir
                 </th>
                 <th className="px-3 py-3.5 text-right whitespace-nowrap text-amber-800 bg-amber-50/50">
-                  <span className="block text-[10px] text-amber-600 font-normal">Kolom 15</span>
+                  <span className="block text-[10px] text-amber-600 font-semibold tracking-wide">HARGA</span>
                   Partai
                 </th>
                 <th className="px-3 py-3.5 text-center whitespace-nowrap bg-blue-50/40 border-l border-blue-100 text-blue-900">
-                  <span className="block text-[10px] text-blue-600 font-normal">Kolom 17</span>
+                  <span className="block text-[10px] text-blue-600 font-semibold tracking-wide">STOK</span>
                   Gudang
                 </th>
                 <th className="px-3 py-3.5 text-center whitespace-nowrap bg-amber-50/40 border-l border-amber-100 text-amber-900">
-                  <span className="block text-[10px] text-amber-600 font-normal">Kolom 18</span>
+                  <span className="block text-[10px] text-amber-600 font-semibold tracking-wide">STOK</span>
                   Toko
                 </th>
                 <th className="px-3 py-3.5 text-center whitespace-nowrap bg-teal-50/40 border-l border-teal-100 text-teal-900">
-                  <span className="block text-[10px] text-teal-600 font-normal">Kolom 19</span>
+                  <span className="block text-[10px] text-teal-600 font-semibold tracking-wide">STOK</span>
                   Piranha
                 </th>
                 <th className="px-3 py-3.5 text-center whitespace-nowrap border-l border-slate-200">
@@ -550,9 +545,9 @@ export const MasterItemsView: React.FC<MasterItemsViewProps> = ({
                     (item.location?.includes('Piranha') ? item.currentStock : 0);
                   const totalStock = item.currentStock;
                   const cost = item.costPrice ?? item.unitPrice ?? 0;
-                  const eceran = item.priceEceran ?? item.priceTiers?.eceran ?? cost;
-                  const grosir = item.priceGrosir ?? item.priceTiers?.grosir ?? cost;
-                  const partai = item.pricePartai ?? item.priceTiers?.partai ?? cost;
+                  const eceran = item.priceEceran ?? item.priceTiers?.eceran ?? 0;
+                  const grosir = item.priceGrosir ?? item.priceTiers?.grosir ?? 0;
+                  const partai = item.pricePartai ?? item.priceTiers?.partai ?? 0;
                   const merk = item.merk || item.brand || '-';
 
                   return (
@@ -843,8 +838,9 @@ export const MasterItemsView: React.FC<MasterItemsViewProps> = ({
                     id="min-stock-field"
                     type="number"
                     min="0"
+                    step="any"
                     value={formMinStock}
-                    onChange={(e) => setFormMinStock(parseInt(e.target.value, 10) || 0)}
+                    onChange={(e) => setFormMinStock(parseFloat(e.target.value) || 0)}
                     className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl font-bold text-slate-900 focus:bg-white"
                   />
                   <span className="text-[10px] text-slate-500 mt-0.5 block">Alert stok menipis</span>
@@ -858,7 +854,7 @@ export const MasterItemsView: React.FC<MasterItemsViewProps> = ({
                     Pemisahan Stok Per Gudang / Lokasi
                   </span>
                   <span className="text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                    Total: {Number(formStockGudang) + Number(formStockPiranha) + Number(formStockToko)} {formUnit}
+                    Total: {Number((Number(formStockGudang) + Number(formStockPiranha) + Number(formStockToko)).toFixed(4))} {formUnit}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -870,9 +866,10 @@ export const MasterItemsView: React.FC<MasterItemsViewProps> = ({
                       id="stock-gudang-field"
                       type="number"
                       min="0"
+                      step="any"
                       value={formStockGudang}
                       onChange={(e) => {
-                        const val = parseInt(e.target.value, 10) || 0;
+                        const val = parseFloat(e.target.value) || 0;
                         setFormStockGudang(val);
                         setFormCurrentStock(val + Number(formStockPiranha) + Number(formStockToko));
                       }}
@@ -887,9 +884,10 @@ export const MasterItemsView: React.FC<MasterItemsViewProps> = ({
                       id="stock-piranha-field"
                       type="number"
                       min="0"
+                      step="any"
                       value={formStockPiranha}
                       onChange={(e) => {
-                        const val = parseInt(e.target.value, 10) || 0;
+                        const val = parseFloat(e.target.value) || 0;
                         setFormStockPiranha(val);
                         setFormCurrentStock(Number(formStockGudang) + val + Number(formStockToko));
                       }}
@@ -904,9 +902,10 @@ export const MasterItemsView: React.FC<MasterItemsViewProps> = ({
                       id="stock-toko-field"
                       type="number"
                       min="0"
+                      step="any"
                       value={formStockToko}
                       onChange={(e) => {
-                        const val = parseInt(e.target.value, 10) || 0;
+                        const val = parseFloat(e.target.value) || 0;
                         setFormStockToko(val);
                         setFormCurrentStock(Number(formStockGudang) + Number(formStockPiranha) + val);
                       }}

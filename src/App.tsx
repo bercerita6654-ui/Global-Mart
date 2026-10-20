@@ -54,12 +54,88 @@ import { ConfirmationModal } from './components/ConfirmationModal.js';
 import { CheckCircle2, AlertCircle, Info, X, ExternalLink, RefreshCw, FileSpreadsheet, Download } from 'lucide-react';
 
 const STORAGE_KEYS = {
-  ITEMS: 'stockflow_items_v1',
+  ITEMS: 'stockflow_items_v2',
   TRANSACTIONS: 'stockflow_transactions_v1',
   CUSTOMERS: 'stockflow_customers_v1',
   SUPPLIERS: 'stockflow_suppliers_v1',
   SHEET_CONFIG: 'stockflow_sheet_config_v1',
 };
+
+function sanitizeStoredItems(storedItems: Item[]): Item[] {
+  if (!Array.isArray(storedItems)) return INITIAL_ITEMS;
+  return storedItems.map((item) => {
+    // If SKU 06723 was corrupted by old parser (priceEceran <= 10 or costPrice <= 10):
+    const eceran = item.priceEceran ?? 0;
+    const cost = item.costPrice ?? 0;
+
+    if (item.sku === '06723' && (eceran <= 10 || cost <= 10)) {
+      return {
+        ...item,
+        costPrice: 2700,
+        unitPrice: 2700,
+        priceEceran: 4000,
+        priceGrosir: 3300,
+        pricePartai: 3200,
+        priceTiers: { eceran: 4000, grosir: 3300, partai: 3200 },
+        stockGudang: 2230,
+        stockGudangUtama: 2230,
+        stockToko: 340,
+        stockPiranha: 0,
+        stockGudangPiranha: 0,
+        currentStock: 2570,
+      };
+    }
+    if (item.sku === '06724' && (eceran <= 10 || cost <= 10)) {
+      return {
+        ...item,
+        costPrice: 3850,
+        unitPrice: 3850,
+        priceEceran: 5500,
+        priceGrosir: 4600,
+        pricePartai: 4400,
+        priceTiers: { eceran: 5500, grosir: 4600, partai: 4400 },
+        stockGudang: 130,
+        stockGudangUtama: 130,
+        stockToko: 280,
+        stockPiranha: 0,
+        currentStock: 410,
+      };
+    }
+    if (item.sku === '01981' && (eceran <= 10 || cost <= 10)) {
+      return {
+        ...item,
+        costPrice: 3950,
+        unitPrice: 3950,
+        priceEceran: 5600,
+        priceGrosir: 4950,
+        pricePartai: 4700,
+        priceTiers: { eceran: 5600, grosir: 4950, partai: 4700 },
+        stockGudang: 20,
+        stockGudangUtama: 20,
+        stockToko: 400,
+        stockPiranha: 0,
+        currentStock: 420,
+      };
+    }
+    if (item.sku === '14502' && (eceran <= 10 || cost <= 10)) {
+      return {
+        ...item,
+        costPrice: 845,
+        unitPrice: 845,
+        priceEceran: 1300,
+        priceGrosir: 925,
+        pricePartai: 910,
+        priceTiers: { eceran: 1300, grosir: 925, partai: 910 },
+        stockGudang: 12769,
+        stockGudangUtama: 12769,
+        stockToko: 42207,
+        stockPiranha: 0,
+        currentStock: 54976,
+      };
+    }
+    return item;
+  });
+}
 
 const DEFAULT_SPREADSHEET_CONFIG: SpreadsheetConfig = {
   spreadsheetId: TARGET_SPREADSHEET_ID,
@@ -81,8 +157,10 @@ export default function App() {
   // Inventory State with localStorage persistence and fallback to seed
   const [items, setItems] = useState<Item[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.ITEMS);
-      if (saved) return JSON.parse(saved);
+      const savedV2 = localStorage.getItem(STORAGE_KEYS.ITEMS);
+      if (savedV2) return sanitizeStoredItems(JSON.parse(savedV2));
+      const savedV1 = localStorage.getItem('stockflow_items_v1');
+      if (savedV1) return sanitizeStoredItems(JSON.parse(savedV1));
     } catch (e) {
       console.warn('Failed to load items from storage:', e);
     }
@@ -221,6 +299,26 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // Auto-fetch stock list from sheet on initial load to ensure up-to-date items
+  useEffect(() => {
+    let isCancelled = false;
+    const fetchLatest = async () => {
+      try {
+        const token = await getAccessToken();
+        const res = await fetchStockListFromSheet(token, spreadsheetConfig.spreadsheetId);
+        if (!isCancelled && res.items && res.items.length > 0) {
+          setItems(res.items);
+        }
+      } catch (err) {
+        console.warn('Initial background sync of stock list:', err);
+      }
+    };
+    fetchLatest();
+    return () => {
+      isCancelled = true;
+    };
+  }, [spreadsheetConfig.spreadsheetId]);
+
   // Summary Metrics
   const summary = calculateStockSummary(items, transactions);
 
@@ -326,25 +424,9 @@ export default function App() {
 
   // Fetch / Import Stock List from sheet " STOCK LIST"
   const handleFetchFromStockListSheet = async () => {
-    let token = await getAccessToken();
-    if (!token) {
-      showToast('info', 'Membuka login Google untuk membaca sheet " STOCK LIST"...');
-      try {
-        const result = await googleSignIn();
-        if (result?.accessToken) {
-          setUser(result.user);
-          token = result.accessToken;
-        } else {
-          return;
-        }
-      } catch (err: any) {
-        showToast('error', err.message || 'Gagal login ke akun Google.');
-        return;
-      }
-    }
-
     setIsFetchingFromSheets(true);
     try {
+      const token = await getAccessToken();
       const res = await fetchStockListFromSheet(token, spreadsheetConfig.spreadsheetId);
       if (res.items.length > 0) {
         setItems(res.items);

@@ -49,9 +49,9 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
   if (!isOpen || !item) return null;
 
   const cost = item.costPrice ?? item.unitPrice ?? 0;
-  const eceran = item.priceEceran ?? item.priceTiers?.eceran ?? cost;
-  const grosir = item.priceGrosir ?? item.priceTiers?.grosir ?? cost;
-  const partai = item.pricePartai ?? item.priceTiers?.partai ?? cost;
+  const eceran = item.priceEceran ?? item.priceTiers?.eceran ?? 0;
+  const grosir = item.priceGrosir ?? item.priceTiers?.grosir ?? 0;
+  const partai = item.pricePartai ?? item.priceTiers?.partai ?? 0;
   const marginPercent =
     item.profitMarginPercent ??
     (cost > 0 && eceran > cost ? calculateMarginFromPrices(cost, eceran) : 0);

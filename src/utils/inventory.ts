@@ -1,15 +1,23 @@
 import type { Item, Transaction, StockSummary, TransactionType, PriceTiers } from '../types/inventory.js';
 
 export function formatRupiah(amount: number): string {
+  const safeVal = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
+  const hasDecimals = Math.abs(safeVal % 1) > 0.00001;
   return new Intl.NumberFormat('id-ID', {
     style: 'currency',
     currency: 'IDR',
-    maximumFractionDigits: 0,
-  }).format(amount);
+    minimumFractionDigits: hasDecimals ? 2 : 0,
+    maximumFractionDigits: hasDecimals ? 4 : 0,
+  }).format(safeVal);
 }
 
-export function formatNumber(val: number): string {
-  return new Intl.NumberFormat('id-ID').format(val);
+export function formatNumber(val: number, maxDecimals: number = 4): string {
+  const safeVal = typeof val === 'number' && !isNaN(val) ? val : 0;
+  const hasDecimals = Math.abs(safeVal % 1) > 0.00001;
+  return new Intl.NumberFormat('id-ID', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: hasDecimals ? maxDecimals : 0,
+  }).format(safeVal);
 }
 
 export function getCurrentDateFormatted(): string {
@@ -345,11 +353,11 @@ export const ITEM_SHEET_HEADERS = [
 
 export function itemToSheetRow(item: Item): (string | number)[] {
   const cost = item.costPrice ?? item.unitPrice ?? 0;
-  const eceran = item.priceEceran ?? item.priceTiers?.eceran ?? cost;
-  const grosir = item.priceGrosir ?? item.priceTiers?.grosir ?? cost;
-  const partai = item.pricePartai ?? item.priceTiers?.partai ?? cost;
+  const eceran = item.priceEceran ?? item.priceTiers?.eceran ?? 0;
+  const grosir = item.priceGrosir ?? item.priceTiers?.grosir ?? 0;
+  const partai = item.pricePartai ?? item.priceTiers?.partai ?? 0;
   // % Keuntungan is strictly computed from Eceran vs Modal
-  const margin = calculateMarginFromPrices(cost, eceran);
+  const margin = cost > 0 && eceran > 0 ? calculateMarginFromPrices(cost, eceran) : 0;
 
   const stockGudang =
     item.stockGudang ??

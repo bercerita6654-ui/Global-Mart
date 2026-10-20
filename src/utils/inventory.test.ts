@@ -9,6 +9,7 @@ import {
   itemToSheetRow,
   transactionToSheetRow,
   formatRupiah,
+  formatNumber,
   calculateTierPrices,
   calculateMarginFromPrices,
   filterCustomers,
@@ -356,4 +357,137 @@ test('parseRowsToItems parses sheet rows correctly into Item objects with exact 
   assert.equal(items[1].category, 'Sembako');
   assert.equal(items[1].merk, 'Gulaku');
   assert.equal(items[1].currentStock, 50);
+});
+
+test('parseCleanNumber preserves all zeroes in thousands, millions, and zero values', async () => {
+  const { parseCleanNumber } = await import('../services/googleSheets.ts');
+  // Thousand and million values with commas and dots
+  assert.equal(parseCleanNumber('150,000'), 150000);
+  assert.equal(parseCleanNumber('150.000'), 150000);
+  assert.equal(parseCleanNumber('1,500,000'), 1500000);
+  assert.equal(parseCleanNumber('1.500.000'), 1500000);
+  assert.equal(parseCleanNumber('Rp 150.000'), 150000);
+  assert.equal(parseCleanNumber('Rp. 150.000,-'), 150000);
+  assert.equal(parseCleanNumber('Rp 1,500,000'), 1500000);
+  assert.equal(parseCleanNumber(150000), 150000);
+
+  // Exact 0 handling
+  assert.equal(parseCleanNumber(0), 0);
+  assert.equal(parseCleanNumber('0'), 0);
+  assert.equal(parseCleanNumber('0.00'), 0);
+  assert.equal(parseCleanNumber('0,00'), 0);
+  assert.equal(parseCleanNumber(''), 0);
+  assert.equal(parseCleanNumber('-'), 0);
+  assert.equal(parseCleanNumber(null), 0);
+  assert.equal(parseCleanNumber(undefined), 0);
+
+  // Decimals with 0.xxx (must NOT be treated as thousands)
+  assert.equal(parseCleanNumber('0.500'), 0.5);
+  assert.equal(parseCleanNumber('0,500'), 0.5);
+  assert.equal(parseCleanNumber('0.250'), 0.25);
+  assert.equal(parseCleanNumber('0,250'), 0.25);
+  assert.equal(parseCleanNumber('0.125'), 0.125);
+  assert.equal(parseCleanNumber('0,125'), 0.125);
+  assert.equal(parseCleanNumber('0.005'), 0.005);
+  assert.equal(parseCleanNumber('0,005'), 0.005);
+  assert.equal(parseCleanNumber('0.5'), 0.5);
+  assert.equal(parseCleanNumber('0,5'), 0.5);
+
+  // Decimals with numbers >= 1
+  assert.equal(parseCleanNumber('10.5'), 10.5);
+  assert.equal(parseCleanNumber('10,5'), 10.5);
+  assert.equal(parseCleanNumber('12.50'), 12.5);
+  assert.equal(parseCleanNumber('12,50'), 12.5);
+  assert.equal(parseCleanNumber('150,000.50'), 150000.5);
+  assert.equal(parseCleanNumber('150.000,50'), 150000.5);
+});
+
+test('parseRowsToItems preserves leading zeroes, 0 prices, and decimals accurately', async () => {
+  const { parseRowsToItems } = await import('../services/googleSheets.ts');
+  const headers = [
+    'SKU', 'ID Sistem', 'Nama Produk', 'Unit', 'Isi Per Dus', 'Stok Minimum',
+    'Kategori', 'Lokasi', 'Merk', 'HPP', '% Margin', 'Status', 'Eceran',
+    'Grosir', 'Partai', 'Total Stok', 'Gudang', 'Toko', 'Piranha'
+  ];
+  const rows = [
+    [
+      '00123', // Kolom 1: SKU with leading zeros
+      'id-00123',
+      'Barang Kode Nol',
+      'pcs',
+      1,
+      5,
+      'Elektronik',
+      'Gudang',
+      'Brand X',
+      '12,500.50', // Kolom 10: HPP with decimals
+      '20%',
+      'AMAN',
+      '15,000', // Kolom 13: Eceran with commas
+      '0',      // Kolom 14: Grosir is explicitly 0 (must NOT be overwritten!)
+      '0',      // Kolom 15: Partai is explicitly 0 (must NOT be overwritten!)
+      '10.5',   // Kolom 16: Total Stok with decimal
+      '10.5',   // Kolom 17: Gudang with decimal
+      '0',      // Kolom 18: Toko is 0
+      '0',      // Kolom 19: Piranha is 0
+    ]
+  ];
+
+  const items = parseRowsToItems(headers, rows);
+  assert.equal(items.length, 1);
+  assert.equal(items[0].sku, '00123'); // Leading zeroes strictly preserved!
+  assert.equal(items[0].costPrice, 12500.5); // Decimals preserved!
+  assert.equal(items[0].priceEceran, 15000);
+  assert.equal(items[0].priceGrosir, 0); // 0 must NOT be replaced!
+  assert.equal(items[0].pricePartai, 0); // 0 must NOT be replaced!
+  assert.equal(items[0].stockGudang, 10.5); // Decimal stock preserved!
+  assert.equal(items[0].stockToko, 0);
+  assert.equal(items[0].stockPiranha, 0);
+  assert.equal(items[0].currentStock, 10.5);
+});
+
+test('formatRupiah and formatNumber strictly retain 0 and formatted decimal digits', () => {
+  assert.equal(formatNumber(0), '0');
+  assert.equal(formatNumber(150000), '150.000');
+  assert.equal(formatNumber(10.5), '10,5');
+  assert.equal(formatNumber(0.5), '0,5');
+  assert.equal(formatNumber(0.25), '0,25');
+
+  // Exact 0 handling
+  assert.equal(formatRupiah(0).replace(/\s/g, ' '), 'Rp 0');
+  assert.equal(formatRupiah(150000).replace(/\s/g, ' '), 'Rp 150.000');
+
+  // Decimal prices preserved in Rupiah format
+  assert.equal(formatRupiah(12500.5).replace(/\s/g, ' '), 'Rp 12.500,50');
+  assert.equal(formatRupiah(0.5).replace(/\s/g, ' '), 'Rp 0,50');
+});
+
+test('parseRowsToItems correctly parses SKU 06723 with Eceran 4,000 as 4000', async () => {
+  const { parseRowsToItems } = await import('../services/googleSheets.ts');
+  const headers = [
+    'Code', 'Barcode', 'Description', 'Unit', 'Divisi', 'Department',
+    'Kategori', 'Sub Kategori', 'Merk', 'Hpp Akhir', 'Hpp + Ppn', 'Hpp PM',
+    'Eceran', 'Grosir', 'Partai', 'Hrg Baru', 'Gudang', 'Toko', 'Piranha'
+  ];
+  const row = [
+    '06723', '', 'TELESTRUK 1 PLY 75*60 GRACIA', 'ROLL', '', '',
+    'KERTAS', '', 'GRACIA', '2,700', '', '', '4,000', '3,300', '3,200',
+    '2,650', '2,230', '340', '0'
+  ];
+
+  const items = parseRowsToItems(headers, [row]);
+  assert.equal(items.length, 1);
+  assert.equal(items[0].sku, '06723');
+  assert.equal(items[0].name, 'TELESTRUK 1 PLY 75*60 GRACIA');
+  assert.equal(items[0].category, 'KERTAS');
+  assert.equal(items[0].unit, 'ROLL');
+  assert.equal(items[0].merk, 'GRACIA');
+  assert.equal(items[0].costPrice, 2700);
+  assert.equal(items[0].priceEceran, 4000); // Must be 4000, NOT 4!
+  assert.equal(items[0].priceGrosir, 3300);
+  assert.equal(items[0].pricePartai, 3200);
+  assert.equal(items[0].stockGudang, 2230);
+  assert.equal(items[0].stockToko, 340);
+  assert.equal(items[0].stockPiranha, 0);
+  assert.equal(formatRupiah(items[0].priceEceran).replace(/\s/g, ' '), 'Rp 4.000');
 });

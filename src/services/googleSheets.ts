@@ -60,16 +60,77 @@ export function findStockListSheetTitle(sheetTitles: string[]): string | null {
 }
 
 /**
- * Parses raw text or numeric cell into a clean number
+ * Parses raw text or numeric cell into a clean number.
+ * Robustly preserves zeroes (0, thousands separators like 150,000 or 150.000, 1,500,000, etc.)
+ * so digit 0s are never truncated or lost.
  */
 export function parseCleanNumber(val: any): number {
   if (typeof val === 'number') return isNaN(val) ? 0 : val;
-  if (!val) return 0;
-  // Handle formats like "Rp 1.500.000", "1,500.00", "20%"
-  const cleanStr = String(val)
-    .replace(/Rp|\s|%|\./gi, '')
-    .replace(',', '.');
-  const n = parseFloat(cleanStr);
+  if (val === null || val === undefined) return 0;
+
+  let s = String(val).trim();
+  if (s === '' || s === '-') return 0;
+
+  // Remove currency prefix like Rp, Rp., IDR, $, spaces, %
+  s = s.replace(/^(?:Rp\.?|IDR|\$)\s*/i, '').replace(/[\s%]/g, '');
+
+  // Handle trailing Indonesian ",-" or ".-" (e.g. "150.000,-")
+  s = s.replace(/[,.]-$/, '');
+
+  // Check if both dot and comma exist:
+  const lastDot = s.lastIndexOf('.');
+  const lastComma = s.lastIndexOf(',');
+
+  if (lastDot !== -1 && lastComma !== -1) {
+    if (lastComma > lastDot) {
+      // Indonesian format: dots are thousands separators, comma is decimal (e.g. 1.500.000,50)
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      // US format: commas are thousands separators, dot is decimal (e.g. 1,500,000.50)
+      s = s.replace(/,/g, '');
+    }
+  } else if (lastComma !== -1) {
+    // Only comma(s) exist
+    const parts = s.split(',');
+    if (parts.length > 2) {
+      // Multiple commas: e.g. "1,500,000" -> thousands separator
+      s = s.replace(/,/g, '');
+    } else if (parts.length === 2) {
+      const intPart = parts[0];
+      const decPart = parts[1];
+      // If integer part is "0" or "-0" or empty, e.g. "0,500", "0,5", ",25" -> ALWAYS A DECIMAL!
+      if (intPart === '0' || intPart === '-0' || intPart === '') {
+        s = `${intPart || '0'}.${decPart}`;
+      } else if (decPart.length === 3 && Math.abs(Number(intPart)) >= 1) {
+        // e.g. "150,000", "1,000" -> standard thousands separator in US notation
+        s = s.replace(/,/g, '');
+      } else {
+        // e.g. "12,5", "10,50", "0,25" -> decimal comma in Indonesian notation
+        s = `${intPart}.${decPart}`;
+      }
+    }
+  } else if (lastDot !== -1) {
+    // Only dot(s) exist
+    const parts = s.split('.');
+    if (parts.length > 2) {
+      // Multiple dots: e.g. "1.500.000" -> thousands separator
+      s = s.replace(/\./g, '');
+    } else if (parts.length === 2) {
+      const intPart = parts[0];
+      const decPart = parts[1];
+      // If integer part is "0" or "-0" or empty, e.g. "0.500", "0.25", ".75" -> ALWAYS A DECIMAL!
+      if (intPart === '0' || intPart === '-0' || intPart === '') {
+        s = `${intPart || '0'}.${decPart}`;
+      } else if (decPart.length === 3 && Math.abs(Number(intPart)) >= 1) {
+        // e.g. "150.000", "10.000" -> Indonesian thousands separator
+        s = s.replace(/\./g, '');
+      } else {
+        // e.g. "12.5", "10.50", "0.25" -> standard decimal dot
+      }
+    }
+  }
+
+  const n = parseFloat(s);
   return isNaN(n) ? 0 : n;
 }
 
@@ -140,7 +201,7 @@ export function parseRowsToItems(headers: string[], rows: any[][]): Item[] {
       return;
     if (rawSku.toUpperCase().includes('TOTAL') || rawName.toUpperCase().includes('TOTAL')) return;
 
-    const sku = rawSku || `SKU-${String(idx + 1).padStart(3, '0')}`;
+    const sku = rawSku !== '' ? rawSku : `SKU-${String(idx + 1).padStart(3, '0')}`;
     const name = rawName || rawSku;
 
     // Kolom 2 (idx 1): ID Sistem / Barcode
@@ -230,14 +291,15 @@ export function parseRowsToItems(headers: string[], rows: any[][]): Item[] {
         ? parseCleanNumber(row[hPartaiCol])
         : 0;
 
-    if (priceEceran === 0 && costPrice > 0) {
+    // Only fallback if price columns do not exist in the sheet at all
+    const hasPriceColsInSheet =
+      row[12] !== undefined || row[13] !== undefined || row[14] !== undefined ||
+      hEceranCol !== -1 || hGrosirCol !== -1 || hPartaiCol !== -1;
+    if (!hasPriceColsInSheet && costPrice > 0) {
       const calculatedTiers = calculateTierPrices(costPrice, profitMarginPercent || 25);
       priceEceran = calculatedTiers.eceran;
       priceGrosir = calculatedTiers.grosir;
       pricePartai = calculatedTiers.partai;
-    } else {
-      if (priceGrosir === 0 && priceEceran > 0) priceGrosir = Math.round(priceEceran * 0.95);
-      if (pricePartai === 0 && priceEceran > 0) pricePartai = Math.round(priceEceran * 0.9);
     }
 
     // Stock:
@@ -266,8 +328,11 @@ export function parseRowsToItems(headers: string[], rows: any[][]): Item[] {
         : 0;
 
     let currentStock = stockGudang + stockToko + stockPiranha;
-    if (currentStock === 0 && row[15] !== undefined) {
-      currentStock = parseCleanNumber(row[15]);
+    if (row[15] !== undefined && String(row[15]).trim() !== '') {
+      const explicitTotal = parseCleanNumber(row[15]);
+      if (currentStock === 0 || explicitTotal > 0) {
+        currentStock = explicitTotal;
+      }
     } else if (currentStock === 0 && hTotalStockCol !== -1 && row[hTotalStockCol]) {
       currentStock = parseCleanNumber(row[hTotalStockCol]);
     }
@@ -323,86 +388,127 @@ export function parseRowsToItems(headers: string[], rows: any[][]): Item[] {
 /**
  * Fetches the stock list directly from the sheet named " STOCK LIST" (or "STOCK LIST")
  */
+/**
+ * Fetches stock list from Google Sheets publicly via Google Visualization API
+ * Supports public spreadsheets without requiring user OAuth login.
+ */
+export async function fetchStockListPublic(
+  spreadsheetId: string
+): Promise<{ items: Item[]; sheetTitle: string; count: number }> {
+  const candidateNames = ['STOCK LIST', ' STOCK LIST', ''];
+  let lastError: any = null;
+
+  for (const sheetName of candidateNames) {
+    try {
+      const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:json${
+        sheetName ? `&sheet=${encodeURIComponent(sheetName)}` : ''
+      }`;
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const text = await res.text();
+      const start = text.indexOf('{');
+      const end = text.lastIndexOf('}');
+      if (start === -1 || end === -1) continue;
+      const json = JSON.parse(text.slice(start, end + 1));
+      if (!json.table || !json.table.rows) continue;
+
+      const headers = json.table.cols.map((c: any) => c.label || '');
+      const dataRows = json.table.rows.map((r: any) =>
+        r.c.map((cell: any) => {
+          if (!cell) return '';
+          return cell.f !== undefined
+            ? cell.f
+            : cell.v !== null && cell.v !== undefined
+            ? cell.v
+            : '';
+        })
+      );
+
+      const items = parseRowsToItems(headers, dataRows);
+      if (items.length > 0) {
+        return {
+          items,
+          sheetTitle: sheetName || 'STOCK LIST',
+          count: items.length,
+        };
+      }
+    } catch (e) {
+      lastError = e;
+    }
+  }
+
+  throw lastError || new Error('Gagal mengambil data dari Google Sheets.');
+}
+
+/**
+ * Fetches data from " STOCK LIST" (or "STOCK LIST")
+ * Supports OAuth token and automatically falls back to public fetch if token is unavailable or fails.
+ */
 export async function fetchStockListFromSheet(
-  accessToken: string,
+  accessToken: string | null | undefined,
   spreadsheetId: string
 ): Promise<{
   items: Item[];
   sheetTitle: string;
   count: number;
 }> {
-  // 1. Fetch metadata to find available sheet tabs
-  const metaRes = await fetch(
-    `${SHEETS_API_BASE}/${spreadsheetId}?fields=sheets.properties.title`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+  if (accessToken) {
+    try {
+      // 1. Fetch metadata to find available sheet tabs
+      const metaRes = await fetch(
+        `${SHEETS_API_BASE}/${spreadsheetId}?fields=sheets.properties.title`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (metaRes.ok) {
+        const metaData = await metaRes.json();
+        const sheetTitles: string[] = (metaData.sheets || []).map(
+          (s: any) => s.properties?.title || ''
+        );
+
+        // 2. Find target sheet matching " STOCK LIST"
+        const targetSheet = findStockListSheetTitle(sheetTitles);
+
+        if (targetSheet) {
+          // 3. Fetch data range from the found sheet (using FORMATTED_VALUE to preserve leading zeroes and formats)
+          const rangeUrl = `${SHEETS_API_BASE}/${spreadsheetId}/values/'${encodeURIComponent(
+            targetSheet
+          )}'!A1:Z5000?valueRenderOption=FORMATTED_VALUE`;
+          const dataRes = await fetch(rangeUrl, {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          });
+
+          if (dataRes.ok) {
+            const data = await dataRes.json();
+            const rawRows: any[][] = data.values || [];
+
+            if (rawRows.length > 1) {
+              const headerRow = rawRows[0].map((h) => String(h || '').trim());
+              const dataRows = rawRows.slice(1);
+              const items = parseRowsToItems(headerRow, dataRows);
+
+              return {
+                items,
+                sheetTitle: targetSheet,
+                count: items.length,
+              };
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('OAuth Sheets API fetch failed, trying public fallback:', err);
     }
-  );
-
-  if (!metaRes.ok) {
-    const err = await metaRes.json().catch(() => ({}));
-    throw new Error(
-      err.error?.message ||
-        'Gagal membaca spreadsheet. Pastikan Anda telah masuk ke Akun Google dan memiliki izin akses.'
-    );
   }
 
-  const metaData = await metaRes.json();
-  const sheetTitles: string[] = (metaData.sheets || []).map(
-    (s: any) => s.properties?.title || ''
-  );
-
-  // 2. Find target sheet matching " STOCK LIST"
-  const targetSheet = findStockListSheetTitle(sheetTitles);
-
-  if (!targetSheet) {
-    throw new Error(
-      `Sheet " STOCK LIST" belum ditemukan di spreadsheet ini. Sheet yang tersedia: ${
-        sheetTitles.join(', ') || 'kosong'
-      }.`
-    );
-  }
-
-  // 3. Fetch data range from the found sheet
-  const rangeUrl = `${SHEETS_API_BASE}/${spreadsheetId}/values/'${encodeURIComponent(
-    targetSheet
-  )}'!A1:Z5000`;
-  const dataRes = await fetch(rangeUrl, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  if (!dataRes.ok) {
-    const err = await dataRes.json().catch(() => ({}));
-    throw new Error(
-      err.error?.message || `Gagal mengambil data dari sheet "${targetSheet}".`
-    );
-  }
-
-  const data = await dataRes.json();
-  const rawRows: any[][] = data.values || [];
-
-  if (rawRows.length <= 1) {
-    return {
-      items: [],
-      sheetTitle: targetSheet,
-      count: 0,
-    };
-  }
-
-  const headerRow = rawRows[0].map((h) => String(h || '').trim());
-  const dataRows = rawRows.slice(1);
-
-  const items = parseRowsToItems(headerRow, dataRows);
-
-  return {
-    items,
-    sheetTitle: targetSheet,
-    count: items.length,
-  };
+  // Fallback to public gviz fetch
+  return fetchStockListPublic(spreadsheetId);
 }
 
 /**
