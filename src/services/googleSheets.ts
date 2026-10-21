@@ -713,21 +713,39 @@ export function parseRowsToSuppliers(headers: string[], rows: any[][]): Supplier
 
   return suppliers;
 }
+function getColIndex(headers: string[], keywords: string[], defaultIdx: number): number {
+  if (!headers || headers.length === 0) return defaultIdx;
+  const idx = headers.findIndex((h) => {
+    const norm = String(h || '').toUpperCase();
+    return keywords.some((kw) => norm.includes(kw.toUpperCase()));
+  });
+  return idx !== -1 ? idx : defaultIdx;
+}
 
 /**
  * Parses rows from sheet "HISTORY PEMBELIAN" (Barang Masuk) into Transaction[]
- * Headers:
- * ["ID Masuk", "Waktu Penerimaan", "Nama Barang & SKU", "🏢 Lokasi Gudang Masuk", "Kuantitas Masuk", "Harga Modal Satuan", "Total Nilai Pembelian", "Pemasok / Supplier", "No. PO / Surat Jalan", "Petugas Penerima", "Aksi"]
  */
 export function parseRowsToPembelian(headers: string[], rows: any[][]): Transaction[] {
   const txs: Transaction[] = [];
 
+  const idCol = getColIndex(headers, ['ID MASUK', 'NO TRANSAKSI', 'ID'], 0);
+  const waktuCol = getColIndex(headers, ['WAKTU', 'TANGGAL', 'DATE'], 1);
+  const namaSkuCol = getColIndex(headers, ['NAMA BARANG', 'SKU', 'PRODUK', 'BARANG'], 2);
+  const lokasiCol = getColIndex(headers, ['LOKASI', 'GUDANG'], 3);
+  const qtyCol = getColIndex(headers, ['KUANTITAS', 'QTY', 'JUMLAH'], 4);
+  const priceCol = getColIndex(headers, ['HARGA MODAL', 'MODAL', 'SATUAN', 'HARGA'], 5);
+  const totalCol = getColIndex(headers, ['TOTAL NILAI', 'TOTAL PEMBELIAN', 'TOTAL'], 6);
+  const suppCol = getColIndex(headers, ['PEMASOK', 'SUPPLIER', 'PENYEDIA'], 7);
+  const refCol = getColIndex(headers, ['NO. PO', 'SURAT JALAN', 'DOKUMEN', 'PO', 'REF'], 8);
+  const opCol = getColIndex(headers, ['PETUGAS', 'OPERATOR', 'ADMIN'], 9);
+  const notesCol = getColIndex(headers, ['CATATAN', 'KETERANGAN', 'NOTES'], 10);
+
   rows.forEach((row, idx) => {
     if (!row || row.length === 0) return;
-    const rawId = row[0] !== undefined ? String(row[0]).trim() : '';
+    const rawId = row[idCol] !== undefined ? String(row[idCol]).trim() : '';
     if (!rawId || rawId.toUpperCase().includes('ID MASUK') || rawId.toUpperCase().includes('ID')) return;
 
-    const rawWaktu = row[1] !== undefined ? String(row[1]).trim() : '';
+    const rawWaktu = row[waktuCol] !== undefined ? String(row[waktuCol]).trim() : '';
     let date = new Date().toISOString().slice(0, 10);
     let time = '10:00';
     if (rawWaktu) {
@@ -736,7 +754,7 @@ export function parseRowsToPembelian(headers: string[], rows: any[][]): Transact
       if (parts[1]) time = parts[1];
     }
 
-    const rawNamaSku = row[2] !== undefined ? String(row[2]).trim() : '';
+    const rawNamaSku = row[namaSkuCol] !== undefined ? String(row[namaSkuCol]).trim() : '';
     let sku = '';
     let itemName = rawNamaSku;
     const skuMatch = rawNamaSku.match(/^(.*?)\s*[\(\[]([A-Za-z0-9_-]+)[\)\]]$/);
@@ -745,18 +763,18 @@ export function parseRowsToPembelian(headers: string[], rows: any[][]): Transact
       sku = skuMatch[2].trim();
     }
 
-    const rawLokasi = row[3] !== undefined ? String(row[3]).trim() : 'Gudang Utama';
+    const rawLokasi = row[lokasiCol] !== undefined ? String(row[lokasiCol]).trim() : 'Gudang Utama';
     const targetWarehouse =
       rawLokasi.includes('Piranha') ? 'Gudang Piranha' :
       rawLokasi.includes('Toko') ? 'Toko' : 'Gudang Utama';
 
-    const quantity = parseCleanNumber(row[4]) || 1;
-    const unitPrice = parseCleanNumber(row[5]) || 0;
-    const totalPrice = parseCleanNumber(row[6]) || (quantity * unitPrice);
-    const supplier = row[7] !== undefined ? String(row[7]).trim() : '-';
-    const refDoc = row[8] !== undefined ? String(row[8]).trim() : '-';
-    const operator = row[9] !== undefined ? String(row[9]).trim() : 'Petugas Penerima';
-    const notes = row[10] !== undefined ? String(row[10]).trim() : '';
+    const quantity = parseCleanNumber(row[qtyCol]) || 1;
+    const unitPrice = parseCleanNumber(row[priceCol]) || 0;
+    const totalPrice = parseCleanNumber(row[totalCol]) || (quantity * unitPrice);
+    const supplier = row[suppCol] !== undefined ? String(row[suppCol]).trim() : '-';
+    const refDoc = row[refCol] !== undefined ? String(row[refCol]).trim() : '-';
+    const operator = row[opCol] !== undefined ? String(row[opCol]).trim() : 'Petugas Penerima';
+    const notes = row[notesCol] !== undefined ? String(row[notesCol]).trim() : '';
 
     txs.push({
       id: rawId || `TX-IN-${Date.now()}-${idx + 1}`,
@@ -785,18 +803,29 @@ export function parseRowsToPembelian(headers: string[], rows: any[][]): Transact
 
 /**
  * Parses rows from sheet "HISTORY PENJUALAN" (Barang Keluar) into Transaction[]
- * Headers:
- * ["ID Penjualan", "Waktu Penjualan", "Nama Barang & SKU", "🏷️ Kategori Harga", "Kuantitas Terjual", "Harga Satuan Terjual", "Total Penjualan", "Pelanggan / Customer", "Sales Penanggung Jawab", "Metode Pembayaran", "No. DO / Ref", "Aksi"]
  */
 export function parseRowsToPenjualan(headers: string[], rows: any[][]): Transaction[] {
   const txs: Transaction[] = [];
 
+  const idCol = getColIndex(headers, ['ID PENJUALAN', 'NO TRANSAKSI', 'ID'], 0);
+  const waktuCol = getColIndex(headers, ['WAKTU', 'TANGGAL', 'DATE'], 1);
+  const namaSkuCol = getColIndex(headers, ['NAMA BARANG', 'SKU', 'PRODUK', 'BARANG'], 2);
+  const tierCol = getColIndex(headers, ['KATEGORI HARGA', 'TIER', 'HARGA'], 3);
+  const qtyCol = getColIndex(headers, ['KUANTITAS', 'QTY', 'JUMLAH'], 4);
+  const priceCol = getColIndex(headers, ['HARGA SATUAN', 'HARGA TERJUAL', 'HARGA'], 5);
+  const totalCol = getColIndex(headers, ['TOTAL PENJUALAN', 'TOTAL'], 6);
+  const custCol = getColIndex(headers, ['PELANGGAN', 'CUSTOMER'], 7);
+  const salesCol = getColIndex(headers, ['SALES', 'PENANGGUNG JAWAB'], 8);
+  const payCol = getColIndex(headers, ['METODE PEMBAYARAN', 'METODE', 'PAYMENT'], 9);
+  const refCol = getColIndex(headers, ['NO. DO', 'REF', 'DOKUMEN'], 10);
+  const notesCol = getColIndex(headers, ['CATATAN', 'KETERANGAN', 'NOTES'], 11);
+
   rows.forEach((row, idx) => {
     if (!row || row.length === 0) return;
-    const rawId = row[0] !== undefined ? String(row[0]).trim() : '';
+    const rawId = row[idCol] !== undefined ? String(row[idCol]).trim() : '';
     if (!rawId || rawId.toUpperCase().includes('ID PENJUALAN') || rawId.toUpperCase().includes('ID')) return;
 
-    const rawWaktu = row[1] !== undefined ? String(row[1]).trim() : '';
+    const rawWaktu = row[waktuCol] !== undefined ? String(row[waktuCol]).trim() : '';
     let date = new Date().toISOString().slice(0, 10);
     let time = '11:00';
     if (rawWaktu) {
@@ -805,7 +834,7 @@ export function parseRowsToPenjualan(headers: string[], rows: any[][]): Transact
       if (parts[1]) time = parts[1];
     }
 
-    const rawNamaSku = row[2] !== undefined ? String(row[2]).trim() : '';
+    const rawNamaSku = row[namaSkuCol] !== undefined ? String(row[namaSkuCol]).trim() : '';
     let sku = '';
     let itemName = rawNamaSku;
     const skuMatch = rawNamaSku.match(/^(.*?)\s*[\(\[]([A-Za-z0-9_-]+)[\)\]]$/);
@@ -814,19 +843,19 @@ export function parseRowsToPenjualan(headers: string[], rows: any[][]): Transact
       sku = skuMatch[2].trim();
     }
 
-    const rawTier = row[3] !== undefined ? String(row[3]).trim().toLowerCase() : 'eceran';
+    const rawTier = row[tierCol] !== undefined ? String(row[tierCol]).trim().toLowerCase() : 'eceran';
     let priceTierUsed: 'eceran' | 'grosir' | 'partai' | 'modal' | 'custom' = 'eceran';
     if (rawTier.includes('grosir')) priceTierUsed = 'grosir';
     else if (rawTier.includes('partai')) priceTierUsed = 'partai';
     else if (rawTier.includes('modal') || rawTier.includes('hpp')) priceTierUsed = 'modal';
 
-    const quantity = parseCleanNumber(row[4]) || 1;
-    const unitPrice = parseCleanNumber(row[5]) || 0;
-    const totalPrice = parseCleanNumber(row[6]) || (quantity * unitPrice);
-    const customer = row[7] !== undefined ? String(row[7]).trim() : '-';
-    const salesPerson = row[8] !== undefined ? String(row[8]).trim() : '-';
+    const quantity = parseCleanNumber(row[qtyCol]) || 1;
+    const unitPrice = parseCleanNumber(row[priceCol]) || 0;
+    const totalPrice = parseCleanNumber(row[totalCol]) || (quantity * unitPrice);
+    const customer = row[custCol] !== undefined ? String(row[custCol]).trim() : '-';
+    const salesPerson = row[salesCol] !== undefined ? String(row[salesCol]).trim() : '-';
 
-    const rawPay = row[9] !== undefined ? String(row[9]).trim() : 'CASH';
+    const rawPay = row[payCol] !== undefined ? String(row[payCol]).trim() : 'CASH';
     const isKredit = /kredit|credit|tempo/i.test(rawPay);
     const paymentMethod: 'CASH' | 'KREDIT' = isKredit ? 'KREDIT' : 'CASH';
     let creditTerm: '7 Hari' | '14 Hari' | '30 Hari' | undefined = undefined;
@@ -836,8 +865,8 @@ export function parseRowsToPenjualan(headers: string[], rows: any[][]): Transact
       else creditTerm = '14 Hari';
     }
 
-    const refDoc = row[10] !== undefined ? String(row[10]).trim() : '-';
-    const notes = row[11] !== undefined ? String(row[11]).trim() : '';
+    const refDoc = row[refCol] !== undefined ? String(row[refCol]).trim() : '-';
+    const notes = row[notesCol] !== undefined ? String(row[notesCol]).trim() : '';
 
     txs.push({
       id: rawId || `TX-OUT-${Date.now()}-${idx + 1}`,
@@ -944,6 +973,10 @@ export async function fetchTransactionsFromSheets(
     'HISTORY PEMBELIAN',
     'HISTORY_PEMBELIAN',
     'PEMBELIAN',
+    'MUTASI_PEMBELIAN',
+    'PEMBELIAN_MASUK',
+    'BARANG_MASUK',
+    'MUTASI MASUK',
   ]);
   if (gridPembelian && gridPembelian.dataRows.length > 0) {
     const txsIn = parseRowsToPembelian(gridPembelian.headers, gridPembelian.dataRows);
@@ -955,6 +988,10 @@ export async function fetchTransactionsFromSheets(
     'HISTORY PENJUALAN',
     'HISTORY_PENJUALAN',
     'PENJUALAN',
+    'MUTASI_PENJUALAN',
+    'PENJUALAN_KELUAR',
+    'BARANG_KELUAR',
+    'MUTASI KELUAR',
   ]);
   if (gridPenjualan && gridPenjualan.dataRows.length > 0) {
     const txsOut = parseRowsToPenjualan(gridPenjualan.headers, gridPenjualan.dataRows);

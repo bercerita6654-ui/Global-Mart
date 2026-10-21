@@ -669,13 +669,47 @@ export default function App() {
     });
   };
 
-  const handleLoginAccount = (acc: UserAccount) => {
+  const handleLoginAccount = async (acc: UserAccount) => {
     setActiveUser(acc);
     // Update lastLogin on account
     const updatedTime = new Date().toISOString().replace('T', ' ').slice(0, 16);
     const updatedAcc = { ...acc, lastLogin: updatedTime };
     setAccounts((prev) => prev.map((a) => (a.id === acc.id ? updatedAcc : a)));
     showToast('success', `Berhasil Masuk sebagai ${acc.name} (${acc.role})!`);
+
+    // Automatically fetch latest data from respective Google Sheets upon login
+    setIsSyncing(true);
+    try {
+      const token = await getAccessToken();
+      const id = spreadsheetConfig.spreadsheetId;
+
+      const [resItems, resTxs, resSupp, resCust, resSales, resAccounts] = await Promise.all([
+        fetchStockListFromSheet(token, id).catch(() => ({ items: [], count: 0 })),
+        fetchTransactionsFromSheets(token, id).catch(() => ({ transactions: [], count: 0 })),
+        fetchSuppliersFromSheet(token, id).catch(() => ({ suppliers: [], count: 0 })),
+        fetchCustomersFromSheet(token, id).catch(() => ({ customers: [], count: 0 })),
+        fetchSalesFromSheet(token, id).catch(() => []),
+        fetchAccountsFromSheet(token, id).catch(() => ({ accounts: [], count: 0 })),
+      ]);
+
+      if (resItems.items && resItems.items.length > 0) setItems(resItems.items);
+      if (resTxs.transactions && resTxs.transactions.length > 0) setTransactions(resTxs.transactions);
+      if (resSupp.suppliers && resSupp.suppliers.length > 0) setSuppliers(resSupp.suppliers);
+      if (resCust.customers && resCust.customers.length > 0) setCustomers(resCust.customers);
+      if (resSales && resSales.length > 0) setSalesPersons(resSales);
+      if (resAccounts.accounts && resAccounts.accounts.length > 0) setAccounts(resAccounts.accounts);
+
+      if (resTxs.transactions.length > 0 || resSupp.suppliers.length > 0) {
+        showToast(
+          'info',
+          `Data otomatis disinkronkan dari Google Sheets (Riwayat Mutasi: ${resTxs.count}, Supplier: ${resSupp.count}).`
+        );
+      }
+    } catch (err: any) {
+      console.warn('Auto fetch on login account notice:', err);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleLogoutAccount = () => {
