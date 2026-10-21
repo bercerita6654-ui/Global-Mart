@@ -16,18 +16,20 @@ import {
   Check,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import type { Transaction, SpreadsheetConfig } from '../types/inventory.js';
+import type { Transaction, SpreadsheetConfig, UserAccount } from '../types/inventory.js';
 import {
   filterTransactions,
   formatRupiah,
   formatNumber,
   calculateDueDate,
+  hasPermission,
 } from '../utils/inventory.js';
 import { generateNotaPdf } from '../utils/pdfGenerator.js';
 
 interface TransactionHistoryViewProps {
   transactions: Transaction[];
   spreadsheetConfig: SpreadsheetConfig | null;
+  activeUser?: UserAccount | null;
   isFetching?: boolean;
   onRefreshFromSheets?: () => void;
   onOpenTransactionModal: (type: 'IN' | 'OUT') => void;
@@ -39,6 +41,7 @@ interface TransactionHistoryViewProps {
 export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
   transactions,
   spreadsheetConfig,
+  activeUser,
   isFetching = false,
   onRefreshFromSheets,
   onOpenTransactionModal,
@@ -604,15 +607,17 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
                             <span>Nota</span>
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => onDeleteTransaction && onDeleteTransaction(tx.id)}
-                          title={`Hapus catatan mutasi [${tx.id}]`}
-                          className="inline-flex items-center space-x-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 hover:text-rose-800 rounded-lg text-xs font-bold transition-colors border border-rose-200 shadow-2xs"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                          <span>Hapus</span>
-                        </button>
+                        {hasPermission(activeUser, tx.type === 'IN' ? 'history_in' : 'history_out', 'delete') && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteTransaction && onDeleteTransaction(tx.id)}
+                            title={`Hapus catatan mutasi [${tx.id}]`}
+                            className="inline-flex items-center space-x-1 px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 active:bg-rose-200 text-rose-700 hover:text-rose-800 rounded-lg text-xs font-bold transition-colors border border-rose-200 shadow-2xs"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Hapus</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

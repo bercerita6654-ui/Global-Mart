@@ -1665,6 +1665,7 @@ export default function App() {
           <TransactionHistoryView
             transactions={transactions}
             spreadsheetConfig={spreadsheetConfig}
+            activeUser={activeUser}
             isFetching={isFetchingTransactions}
             onRefreshFromSheets={handleFetchTransactionsFromSheet}
             onOpenTransactionModal={openTransactionModal}
@@ -1735,6 +1736,7 @@ export default function App() {
         activeUser={activeUser}
         onLoginAccount={handleLoginAccount}
         onLoginGoogle={handleLogin}
+        user={user}
         onRefreshAccountsFromSheet={handleFetchAccountsFromSheet}
         isSyncingAccounts={isFetchingAccounts}
         googleUserEmail={user?.email}

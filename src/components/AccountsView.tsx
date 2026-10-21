@@ -647,7 +647,8 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
                         { id: 'master', label: 'Stock List / Master', actions: [{ key: 'view', label: 'Lihat' }, { key: 'add', label: 'Tambah' }, { key: 'edit', label: 'Ubah' }, { key: 'delete', label: 'Hapus' }] },
                         { id: 'customers', label: 'Database Customer', actions: [{ key: 'view', label: 'Lihat' }, { key: 'add', label: 'Tambah' }, { key: 'edit', label: 'Ubah' }, { key: 'delete', label: 'Hapus' }] },
                         { id: 'suppliers', label: 'Database Supplier', actions: [{ key: 'view', label: 'Lihat' }, { key: 'add', label: 'Tambah' }, { key: 'edit', label: 'Ubah' }, { key: 'delete', label: 'Hapus' }] },
-                        { id: 'history', label: 'Riwayat Mutasi', actions: [{ key: 'view', label: 'Lihat' }, { key: 'add', label: 'Tambah' }, { key: 'delete', label: 'Hapus' }] },
+                        { id: 'history_in', label: 'History Pembelian (Masuk)', actions: [{ key: 'view', label: 'Lihat' }, { key: 'add', label: 'Tambah' }, { key: 'edit', label: 'Ubah' }, { key: 'delete', label: 'Hapus' }] },
+                        { id: 'history_out', label: 'History Penjualan (Keluar)', actions: [{ key: 'view', label: 'Lihat' }, { key: 'add', label: 'Tambah' }, { key: 'edit', label: 'Ubah' }, { key: 'delete', label: 'Hapus' }] },
                         { id: 'reports', label: 'Laporan', actions: [{ key: 'view', label: 'Lihat' }] },
                         { id: 'accounts', label: 'Database Akun', actions: [{ key: 'view', label: 'Lihat' }, { key: 'edit', label: 'Kelola' }] },
                       ].map((m) => {
