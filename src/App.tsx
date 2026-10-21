@@ -234,11 +234,8 @@ export default function App() {
 
   const [activeUser, setActiveUser] = useState<UserAccount | null>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_USER);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.warn('Failed to load active user from storage:', e);
-    }
+      localStorage.removeItem(STORAGE_KEYS.ACTIVE_USER);
+    } catch {}
     return null;
   });
 
@@ -287,14 +284,7 @@ export default function App() {
   const [preselectedItemId, setPreselectedItemId] = useState<string | undefined>(undefined);
   const [preselectedRecipient, setPreselectedRecipient] = useState<string>('');
   const [spreadsheetModalOpen, setSpreadsheetModalOpen] = useState(false);
-  const [loginModalOpen, setLoginModalOpen] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.ACTIVE_USER);
-      return !saved;
-    } catch {
-      return true;
-    }
-  });
+  const [loginModalOpen, setLoginModalOpen] = useState<boolean>(true);
 
   // Destructive Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
