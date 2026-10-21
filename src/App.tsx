@@ -33,6 +33,7 @@ import {
   getCurrentDateFormatted,
   formatRupiah,
   calculateTierPrices,
+  isMenuAllowed,
 } from './utils/inventory.js';
 import {
   initAuth,
@@ -361,8 +362,12 @@ export default function App() {
   }, [activeUser]);
 
   useEffect(() => {
-    if (activeTab === 'accounts' && activeUser?.username !== 'server') {
-      setActiveTab('dashboard');
+    if (activeUser) {
+      if (!isMenuAllowed(activeUser, activeTab)) {
+        const allTabs = ['dashboard', 'master', 'customers', 'suppliers', 'history', 'reports', 'accounts'] as const;
+        const firstAllowed = allTabs.find((t) => isMenuAllowed(activeUser, t)) || 'dashboard';
+        setActiveTab(firstAllowed);
+      }
     }
   }, [activeTab, activeUser]);
 
@@ -1576,7 +1581,24 @@ export default function App() {
             </div>
           )}
 
-        {activeTab === 'dashboard' && (
+        {!isMenuAllowed(activeUser, activeTab) ? (
+          <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-slate-200 my-8">
+            <ShieldCheck className="w-12 h-12 text-rose-500 mx-auto mb-3" />
+            <h3 className="text-lg font-extrabold text-slate-900">Akses Menu Dibatasi</h3>
+            <p className="text-sm text-slate-600 mt-1 max-w-md mx-auto">
+              Akun Anda belum diberikan izin otoritas untuk mengakses menu ini oleh administrator Server.
+            </p>
+            <button
+              type="button"
+              onClick={() => setActiveTab('dashboard')}
+              className="mt-5 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors"
+            >
+              Kembali ke Dashboard
+            </button>
+          </div>
+        ) : (
+          <>
+            {activeTab === 'dashboard' && (
           <DashboardView
             items={items}
             transactions={transactions}
@@ -1670,6 +1692,8 @@ export default function App() {
             onRefreshFromSheet={handleFetchAccountsFromSheet}
             isSyncing={isSyncing || isFetchingAccounts}
           />
+        )}
+          </>
         )}
       </main>
 

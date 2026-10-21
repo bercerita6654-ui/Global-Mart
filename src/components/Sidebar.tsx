@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import type { SpreadsheetConfig, UserAccount } from '../types/inventory.js';
+import { isMenuAllowed } from '../utils/inventory.js';
 
 interface SidebarProps {
   activeTab: 'dashboard' | 'master' | 'history' | 'reports' | 'customers' | 'suppliers' | 'accounts';
@@ -52,15 +53,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onLogout,
   onLogoutAccount,
 }) => {
-  const navItems = [
+  const rawNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'master', label: 'Stock List', icon: PackageCheck },
     { id: 'customers', label: 'Database Customer', icon: Users },
     { id: 'suppliers', label: 'Database Supplier', icon: Truck },
     { id: 'history', label: 'Riwayat Mutasi', icon: FileSpreadsheet },
     { id: 'reports', label: 'Laporan', icon: BarChart3 },
-    ...(activeUser?.username === 'server' ? [{ id: 'accounts', label: 'Database Akun', icon: ShieldCheck }] : []),
+    { id: 'accounts', label: 'Database Akun', icon: ShieldCheck },
   ];
+
+  const navItems = rawNavItems.filter((item) => isMenuAllowed(activeUser, item.id));
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-200 flex flex-col shrink-0 min-h-screen border-r border-slate-800 shadow-xl">

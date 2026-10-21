@@ -761,3 +761,11 @@ export function calculateDueDate(dateStr: string, paymentMethod?: string, credit
   return d.toISOString().slice(0, 10);
 }
 
+export function isMenuAllowed(user: import('../types/inventory.js').UserAccount | null | undefined, menuId: string): boolean {
+  if (!user) return false;
+  if (menuId === 'accounts' && user.username !== 'server') return false;
+  if (user.username === 'server' || user.role === 'Super User') return true;
+  if (!user.allowedMenus || user.allowedMenus.length === 0 || user.allowedMenus.includes('ALL')) return true;
+  return user.allowedMenus.includes(menuId);
+}
+
