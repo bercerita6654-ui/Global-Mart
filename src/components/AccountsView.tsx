@@ -621,9 +621,9 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5">
-                  Otoritas Akses Menu
+                  Otoritas Akses Menu & Aksi (Lihat, Tambah, Ubah, Hapus)
                 </label>
-                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
                   <label className="flex items-center space-x-2 text-xs font-extrabold text-emerald-800 pb-2 border-b border-slate-200">
                     <input
                       type="checkbox"
@@ -637,38 +637,64 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
                       }}
                       className="w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500"
                     />
-                    <span>Full Akses (Semua Menu)</span>
+                    <span>Full Akses (Semua Menu & Aksi)</span>
                   </label>
 
                   {!formAllowedMenus.includes('ALL') && (
-                    <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div className="space-y-2 pt-1">
                       {[
-                        { id: 'dashboard', label: 'Dashboard' },
-                        { id: 'master', label: 'Stock List' },
-                        { id: 'customers', label: 'Database Customer' },
-                        { id: 'suppliers', label: 'Database Supplier' },
-                        { id: 'history', label: 'Riwayat Mutasi' },
-                        { id: 'reports', label: 'Laporan' },
-                        { id: 'accounts', label: 'Database Akun' },
+                        { id: 'dashboard', label: 'Dashboard', actions: [{ key: 'view', label: 'Lihat' }] },
+                        { id: 'master', label: 'Stock List / Master', actions: [{ key: 'view', label: 'Lihat' }, { key: 'add', label: 'Tambah' }, { key: 'edit', label: 'Ubah' }, { key: 'delete', label: 'Hapus' }] },
+                        { id: 'customers', label: 'Database Customer', actions: [{ key: 'view', label: 'Lihat' }, { key: 'add', label: 'Tambah' }, { key: 'edit', label: 'Ubah' }, { key: 'delete', label: 'Hapus' }] },
+                        { id: 'suppliers', label: 'Database Supplier', actions: [{ key: 'view', label: 'Lihat' }, { key: 'add', label: 'Tambah' }, { key: 'edit', label: 'Ubah' }, { key: 'delete', label: 'Hapus' }] },
+                        { id: 'history', label: 'Riwayat Mutasi', actions: [{ key: 'view', label: 'Lihat' }, { key: 'add', label: 'Tambah' }, { key: 'delete', label: 'Hapus' }] },
+                        { id: 'reports', label: 'Laporan', actions: [{ key: 'view', label: 'Lihat' }] },
+                        { id: 'accounts', label: 'Database Akun', actions: [{ key: 'view', label: 'Lihat' }, { key: 'edit', label: 'Kelola' }] },
                       ].map((m) => {
-                        const checked = formAllowedMenus.includes(m.id);
                         return (
-                          <label key={m.id} className="flex items-center space-x-2 text-xs font-semibold text-slate-700">
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormAllowedMenus([...formAllowedMenus, m.id]);
-                                } else {
-                                  const updated = formAllowedMenus.filter((item) => item !== m.id);
-                                  setFormAllowedMenus(updated.length > 0 ? updated : ['dashboard']);
-                                }
-                              }}
-                              className="w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500"
-                            />
-                            <span>{m.label}</span>
-                          </label>
+                          <div key={m.id} className="p-2.5 bg-white rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-slate-900 w-36">{m.label}</span>
+                            <div className="flex flex-wrap items-center gap-3">
+                              {m.actions.map((act) => {
+                                const token = act.key === 'view' ? m.id : `${m.id}:${act.key}`;
+                                const isChecked = formAllowedMenus.includes('ALL') || formAllowedMenus.includes(m.id) || formAllowedMenus.includes(token);
+                                return (
+                                  <label key={act.key} className="flex items-center space-x-1.5 text-[11px] font-semibold text-slate-700 cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={isChecked}
+                                      onChange={(e) => {
+                                        const checked = e.target.checked;
+                                        let updated = [...formAllowedMenus];
+                                        if (updated.includes('ALL')) {
+                                          updated = [];
+                                        }
+                                        if (checked) {
+                                          if (!updated.includes(token) && !updated.includes(m.id)) {
+                                            updated.push(token);
+                                          }
+                                        } else {
+                                          if (updated.includes(m.id)) {
+                                            updated = updated.filter((item) => item !== m.id);
+                                            m.actions.forEach((a) => {
+                                              const t = a.key === 'view' ? m.id : `${m.id}:${a.key}`;
+                                              if (t !== token && !updated.includes(t)) {
+                                                updated.push(t);
+                                              }
+                                            });
+                                          }
+                                          updated = updated.filter((item) => item !== token);
+                                        }
+                                        setFormAllowedMenus(updated.length > 0 ? updated : ['dashboard']);
+                                      }}
+                                      className="w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500"
+                                    />
+                                    <span>{act.label}</span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
