@@ -209,6 +209,37 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
+
+          {/* Quick Demo Accounts List */}
+          {accounts.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-slate-200">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2">
+                Pilih Akun Cepat (Demo / Akses Cepat):
+              </p>
+              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+                {accounts.map((acc) => (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    onClick={() => handleQuickLogin(acc)}
+                    className="flex flex-col items-start p-2.5 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 rounded-xl text-left transition-all group cursor-pointer"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-xs font-bold text-slate-900 group-hover:text-emerald-800 truncate">
+                        {acc.name}
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded font-black bg-slate-200 text-slate-700 group-hover:bg-emerald-200 group-hover:text-emerald-900 uppercase">
+                        {acc.role}
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-mono text-slate-500 group-hover:text-emerald-700 mt-0.5">
+                      @{acc.username} {acc.password ? `(${acc.password})` : ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
