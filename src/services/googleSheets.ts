@@ -1092,7 +1092,8 @@ export function parseRowsToUserAccounts(headers: string[], rows: any[][]): UserA
     // Validate role
     let role: UserRole = 'Purchasing';
     const rLower = roleStr.toLowerCase();
-    if (rLower.includes('admin')) role = 'Admin';
+    if (rLower.includes('super')) role = 'Super User';
+    else if (rLower.includes('admin')) role = 'Admin';
     else role = 'Purchasing';
 
     let allowedMenus: string[] = ['ALL'];
