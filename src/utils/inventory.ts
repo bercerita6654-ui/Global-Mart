@@ -766,8 +766,20 @@ export function isMenuAllowed(user: import('../types/inventory.js').UserAccount 
   if (menuId === 'accounts' && user.username !== 'server') return false;
   if (user.username === 'server' || user.role === 'Super User') return true;
   if (!user.allowedMenus || user.allowedMenus.length === 0 || user.allowedMenus.includes('ALL')) return true;
-  if (user.allowedMenus.includes(menuId)) return true;
-  return user.allowedMenus.some((m) => m === menuId || m.startsWith(`${menuId}:`));
+
+  // General menu token or explicit view token
+  if (user.allowedMenus.includes(menuId) || user.allowedMenus.includes(`${menuId}:view`)) return true;
+
+  // For history parent menu, check if history_in or history_out is allowed
+  if (menuId === 'history') {
+    if (user.allowedMenus.includes('history_in') || user.allowedMenus.includes('history_in:view')) return true;
+    if (user.allowedMenus.includes('history_out') || user.allowedMenus.includes('history_out:view')) return true;
+  }
+
+  // For history_in or history_out child tabs, if general 'history' is present
+  if ((menuId === 'history_in' || menuId === 'history_out') && user.allowedMenus.includes('history')) return true;
+
+  return false;
 }
 
 export function hasPermission(
@@ -779,8 +791,16 @@ export function hasPermission(
   if (menuId === 'accounts' && user.username !== 'server') return false;
   if (user.username === 'server' || user.role === 'Super User') return true;
   if (!user.allowedMenus || user.allowedMenus.length === 0 || user.allowedMenus.includes('ALL')) return true;
-  if (user.allowedMenus.includes(menuId)) return true;
+
+  // Explicit action token (e.g. 'master:add', 'master:view', 'master:edit', 'master:delete')
   if (user.allowedMenus.includes(`${menuId}:${action}`)) return true;
+
+  // If general menu ID is in allowedMenus (e.g. 'master'), grant action
+  if (user.allowedMenus.includes(menuId)) return true;
+
+  // Parent history fallback
+  if (menuId.startsWith('history_') && user.allowedMenus.includes('history')) return true;
+
   return false;
 }
 

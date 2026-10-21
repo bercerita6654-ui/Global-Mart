@@ -1570,6 +1570,7 @@ export default function App() {
         {activeTab === 'master' && (
           <MasterItemsView
             items={items}
+            activeUser={activeUser}
             onAddItem={handleAddItem}
             onUpdateItem={handleUpdateItem}
             onDeleteItem={handleDeleteItem}
@@ -1585,6 +1586,7 @@ export default function App() {
         {activeTab === 'customers' && (
           <CustomersView
             customers={customers}
+            activeUser={activeUser}
             salesPersons={salesPersons}
             isFetching={isFetchingCustomers}
             onRefreshFromSheet={handleFetchCustomersFromSheet}
@@ -1598,6 +1600,7 @@ export default function App() {
         {activeTab === 'suppliers' && (
           <SuppliersView
             suppliers={suppliers}
+            activeUser={activeUser}
             isFetching={isFetchingSuppliers}
             onRefreshFromSheet={handleFetchSuppliersFromSheet}
             onAddSupplier={handleAddSupplier}

@@ -49,14 +49,19 @@ export function generateNotaPdf(data: NotaPdfData): void {
   // --- 1. Header Nota ---
   // Left: Company / Store details
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
+  doc.setFontSize(15);
   doc.setTextColor(30, 41, 59); // slate-800
-  doc.text('Pusat Grosir & Eceran', leftMargin, 18);
+  doc.text('GLOBAL MART', leftMargin, 17);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(71, 85, 105); // slate-600
+  doc.text('Pusatnya belanja Alat Tulis Kantor & Sekolah', leftMargin, 21.5);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setTextColor(100, 116, 139); // slate-500
-  doc.text('Jl. Raya Distribusi Utama No. 88, Indonesia', leftMargin, 23);
+  doc.text('Jl. Gurita I no 38, Blok 9 Pegok-Sesetan, Denpasar-Bali', leftMargin, 25.5);
 
   // Right: NOTA PENJUALAN Badge & Transaksi Info
   doc.setFillColor(209, 250, 229); // emerald-100

@@ -1417,8 +1417,9 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs space-y-6">
                 <div className="flex items-start justify-between border-b border-slate-200 pb-4">
                   <div>
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Pusat Grosir & Eceran</h2>
-                    <p className="text-xs text-slate-500">Jl. Raya Distribusi Utama No. 88, Indonesia</p>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">GLOBAL MART</h2>
+                    <p className="text-xs font-semibold text-slate-600">Pusatnya belanja Alat Tulis Kantor &amp; Sekolah</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Jl. Gurita I no 38, Blok 9 Pegok-Sesetan, Denpasar-Bali</p>
                   </div>
                   <div className="text-right">
                     <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-black uppercase tracking-wider">

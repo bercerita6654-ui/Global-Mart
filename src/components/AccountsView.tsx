@@ -657,36 +657,61 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
                             <span className="text-xs font-bold text-slate-900 w-36">{m.label}</span>
                             <div className="flex flex-wrap items-center gap-3">
                               {m.actions.map((act) => {
-                                const token = act.key === 'view' ? m.id : `${m.id}:${act.key}`;
-                                const isChecked = formAllowedMenus.includes('ALL') || formAllowedMenus.includes(m.id) || formAllowedMenus.includes(token);
+                                const specificToken = `${m.id}:${act.key}`;
+                                const isChecked =
+                                  formAllowedMenus.includes('ALL') ||
+                                  formAllowedMenus.includes(specificToken) ||
+                                  (act.key === 'view' && formAllowedMenus.includes(m.id));
+
                                 return (
                                   <label key={act.key} className="flex items-center space-x-1.5 text-[11px] font-semibold text-slate-700 cursor-pointer">
                                     <input
                                       type="checkbox"
                                       checked={isChecked}
                                       onChange={(e) => {
-                                        const checked = e.target.checked;
-                                        let updated = [...formAllowedMenus];
-                                        if (updated.includes('ALL')) {
-                                          updated = [];
+                                        const check = e.target.checked;
+                                        let updatedTokens: string[] = [];
+
+                                        if (formAllowedMenus.includes('ALL')) {
+                                          [
+                                            { id: 'dashboard', actions: ['view'] },
+                                            { id: 'master', actions: ['view', 'add', 'edit', 'delete'] },
+                                            { id: 'customers', actions: ['view', 'add', 'edit', 'delete'] },
+                                            { id: 'suppliers', actions: ['view', 'add', 'edit', 'delete'] },
+                                            { id: 'history_in', actions: ['view', 'add', 'edit', 'delete'] },
+                                            { id: 'history_out', actions: ['view', 'add', 'edit', 'delete'] },
+                                            { id: 'reports', actions: ['view'] },
+                                            { id: 'accounts', actions: ['view', 'edit'] },
+                                          ].forEach((mod) => {
+                                            mod.actions.forEach((aKey) => {
+                                              updatedTokens.push(`${mod.id}:${aKey}`);
+                                            });
+                                          });
+                                        } else {
+                                          formAllowedMenus.forEach((t) => {
+                                            if (!t.includes(':') && t !== 'ALL') {
+                                              if (t === 'master') updatedTokens.push('master:view', 'master:add', 'master:edit', 'master:delete');
+                                              else if (t === 'customers') updatedTokens.push('customers:view', 'customers:add', 'customers:edit', 'customers:delete');
+                                              else if (t === 'suppliers') updatedTokens.push('suppliers:view', 'suppliers:add', 'suppliers:edit', 'suppliers:delete');
+                                              else if (t === 'history') updatedTokens.push('history_in:view', 'history_in:add', 'history_in:edit', 'history_in:delete', 'history_out:view', 'history_out:add', 'history_out:edit', 'history_out:delete');
+                                              else if (t === 'reports') updatedTokens.push('reports:view');
+                                              else if (t === 'accounts') updatedTokens.push('accounts:view', 'accounts:edit');
+                                              else updatedTokens.push(`${t}:view`);
+                                            } else {
+                                              if (!updatedTokens.includes(t)) updatedTokens.push(t);
+                                            }
+                                          });
                                         }
-                                        if (checked) {
-                                          if (!updated.includes(token) && !updated.includes(m.id)) {
-                                            updated.push(token);
+
+                                        if (check) {
+                                          if (!updatedTokens.includes(specificToken)) {
+                                            updatedTokens.push(specificToken);
                                           }
                                         } else {
-                                          if (updated.includes(m.id)) {
-                                            updated = updated.filter((item) => item !== m.id);
-                                            m.actions.forEach((a) => {
-                                              const t = a.key === 'view' ? m.id : `${m.id}:${a.key}`;
-                                              if (t !== token && !updated.includes(t)) {
-                                                updated.push(t);
-                                              }
-                                            });
-                                          }
-                                          updated = updated.filter((item) => item !== token);
+                                          updatedTokens = updatedTokens.filter((t) => t !== specificToken && t !== m.id);
                                         }
-                                        setFormAllowedMenus(updated.length > 0 ? updated : ['dashboard']);
+
+                                        setFormAllowedMenus(updatedTokens.length > 0 ? updatedTokens : ['dashboard:view']);
                                       }}
                                       className="w-3.5 h-3.5 text-emerald-600 rounded focus:ring-emerald-500"
                                     />

@@ -22,7 +22,7 @@ import {
   Download,
   Eye,
 } from 'lucide-react';
-import type { Item, TransactionType } from '../types/inventory.js';
+import type { Item, TransactionType, UserAccount } from '../types/inventory.js';
 import {
   formatRupiah,
   formatNumber,
@@ -33,6 +33,7 @@ import { SkuDetailModal } from './SkuDetailModal.js';
 
 interface MasterItemsViewProps {
   items: Item[];
+  activeUser?: UserAccount | null;
   onAddItem: (item: Omit<Item, 'id' | 'lastUpdated'>) => void;
   onUpdateItem: (item: Item) => void;
   onDeleteItem: (itemId: string) => void;
@@ -46,6 +47,7 @@ interface MasterItemsViewProps {
 
 export const MasterItemsView: React.FC<MasterItemsViewProps> = ({
   items,
+  activeUser,
   onAddItem,
   onUpdateItem,
   onDeleteItem,
@@ -331,39 +333,43 @@ export const MasterItemsView: React.FC<MasterItemsViewProps> = ({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          {onFetchFromSheets && (
-            <button
-              onClick={onFetchFromSheets}
-              disabled={isFetchingFromSheets}
-              className="flex items-center space-x-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-300 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-xs transition-colors cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
-              title="Ambil dan sinkronkan daftar stok langsung dari sheet ' STOCK LIST' di Google Sheets"
-            >
-              <Download className={`w-4 h-4 text-indigo-600 ${isFetchingFromSheets ? 'animate-bounce' : ''}`} />
-              <span>{isFetchingFromSheets ? 'Mengambil Data...' : "Tarik dari Sheet 'STOCK LIST'"}</span>
-            </button>
-          )}
-          {onSyncToSheets && (
-            <button
-              onClick={onSyncToSheets}
-              disabled={isSyncing}
-              className="flex items-center space-x-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-xs transition-colors cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
-              title="Simpan seluruh data produk ke Google Sheets"
-            >
-              <RefreshCw className={`w-4 h-4 text-emerald-600 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span>{isSyncing ? 'Menyimpan...' : 'Simpan ke Google Sheets'}</span>
-            </button>
-          )}
-          {spreadsheetUrl && (
-            <a
-              href={spreadsheetUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition-colors"
-              title="Buka Google Sheets di tab baru"
-            >
-              <span>Buka Sheet</span>
-              <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
-            </a>
+          {activeUser?.username === 'server' && (
+            <>
+              {onFetchFromSheets && (
+                <button
+                  onClick={onFetchFromSheets}
+                  disabled={isFetchingFromSheets}
+                  className="flex items-center space-x-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 border border-indigo-300 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-xs transition-colors cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
+                  title="Ambil dan sinkronkan daftar stok langsung dari sheet ' STOCK LIST' di Google Sheets"
+                >
+                  <Download className={`w-4 h-4 text-indigo-600 ${isFetchingFromSheets ? 'animate-bounce' : ''}`} />
+                  <span>{isFetchingFromSheets ? 'Mengambil Data...' : "Tarik dari Sheet 'STOCK LIST'"}</span>
+                </button>
+              )}
+              {onSyncToSheets && (
+                <button
+                  onClick={onSyncToSheets}
+                  disabled={isSyncing}
+                  className="flex items-center space-x-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-xs transition-colors cursor-pointer disabled:bg-slate-100 disabled:text-slate-400"
+                  title="Simpan seluruh data produk ke Google Sheets"
+                >
+                  <RefreshCw className={`w-4 h-4 text-emerald-600 ${isSyncing ? 'animate-spin' : ''}`} />
+                  <span>{isSyncing ? 'Menyimpan...' : 'Simpan ke Google Sheets'}</span>
+                </button>
+              )}
+              {spreadsheetUrl && (
+                <a
+                  href={spreadsheetUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-3 py-2.5 rounded-xl text-xs sm:text-sm font-semibold shadow-xs transition-colors"
+                  title="Buka Google Sheets di tab baru"
+                >
+                  <span>Buka Sheet</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                </a>
+              )}
+            </>
           )}
           <button
             onClick={openAddModal}
@@ -375,31 +381,33 @@ export const MasterItemsView: React.FC<MasterItemsViewProps> = ({
         </div>
       </div>
 
-      {/* Sheet Source Indicator Banner */}
-      <div className="bg-gradient-to-r from-indigo-50 via-teal-50 to-emerald-50 border border-indigo-200/70 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
-        <div className="flex items-center space-x-2.5 text-indigo-950">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 animate-pulse"></span>
-          <div>
-            <span className="font-bold">Sumber Data Google Sheets: </span>
-            <code className="bg-white/90 px-2 py-0.5 rounded border border-indigo-200 font-mono text-indigo-800 font-bold text-[11px]">
-              " STOCK LIST"
-            </code>
-            <span className="text-slate-600 ml-1.5 hidden md:inline">
-              Data SKU, nama produk, modal, margin %, harga eceran/grosir/partai, &amp; stok dapat ditarik langsung atau diperbarui dari sheet ini.
-            </span>
+      {/* Sheet Source Indicator Banner (Only for server) */}
+      {activeUser?.username === 'server' && (
+        <div className="bg-gradient-to-r from-indigo-50 via-teal-50 to-emerald-50 border border-indigo-200/70 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+          <div className="flex items-center space-x-2.5 text-indigo-950">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 animate-pulse"></span>
+            <div>
+              <span className="font-bold">Sumber Data Google Sheets: </span>
+              <code className="bg-white/90 px-2 py-0.5 rounded border border-indigo-200 font-mono text-indigo-800 font-bold text-[11px]">
+                " STOCK LIST"
+              </code>
+              <span className="text-slate-600 ml-1.5 hidden md:inline">
+                Data SKU, nama produk, modal, margin %, harga eceran/grosir/partai, &amp; stok dapat ditarik langsung atau diperbarui dari sheet ini.
+              </span>
+            </div>
           </div>
+          {onFetchFromSheets && (
+            <button
+              onClick={onFetchFromSheets}
+              disabled={isFetchingFromSheets}
+              className="self-start sm:self-auto flex items-center space-x-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-white hover:bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200 shadow-2xs transition-colors cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-indigo-600" />
+              <span>{isFetchingFromSheets ? 'Memuat...' : 'Muat dari Sheet'}</span>
+            </button>
+          )}
         </div>
-        {onFetchFromSheets && (
-          <button
-            onClick={onFetchFromSheets}
-            disabled={isFetchingFromSheets}
-            className="self-start sm:self-auto flex items-center space-x-1.5 text-xs font-bold text-indigo-700 hover:text-indigo-900 bg-white hover:bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200 shadow-2xs transition-colors cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5 text-indigo-600" />
-            <span>{isFetchingFromSheets ? 'Memuat...' : 'Muat dari Sheet'}</span>
-          </button>
-        )}
-      </div>
+      )}
 
       {/* Filter and Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">

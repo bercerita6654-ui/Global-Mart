@@ -19,11 +19,12 @@ import {
   FileSpreadsheet,
   RefreshCw,
 } from 'lucide-react';
-import type { Customer, CustomerType, PaymentMethod, CreditTerm } from '../types/inventory.js';
+import type { Customer, CustomerType, PaymentMethod, CreditTerm, UserAccount } from '../types/inventory.js';
 import { SALES_PERSONS } from '../types/inventory.js';
 
 interface CustomersViewProps {
   customers: Customer[];
+  activeUser?: UserAccount | null;
   salesPersons?: string[];
   isFetching?: boolean;
   onRefreshFromSheet?: () => void;
@@ -35,6 +36,7 @@ interface CustomersViewProps {
 
 export const CustomersView: React.FC<CustomersViewProps> = ({
   customers,
+  activeUser,
   salesPersons,
   isFetching = false,
   onRefreshFromSheet,
@@ -231,21 +233,25 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200">
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span>Sheet &quot;DATABASE CUSTOMER&quot;</span>
-          </div>
+          {activeUser?.username === 'server' && (
+            <>
+              <div className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200">
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <span>Sheet &quot;DATABASE CUSTOMER&quot;</span>
+              </div>
 
-          {onRefreshFromSheet && (
-            <button
-              onClick={onRefreshFromSheet}
-              disabled={isFetching}
-              className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:bg-slate-400"
-              title="Tarik data customer terbaru dari Google Sheet 'DATABASE CUSTOMER'"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-              <span>{isFetching ? 'Mengambil...' : 'Tarik dari Sheet'}</span>
-            </button>
+              {onRefreshFromSheet && (
+                <button
+                  onClick={onRefreshFromSheet}
+                  disabled={isFetching}
+                  className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:bg-slate-400"
+                  title="Tarik data customer terbaru dari Google Sheet 'DATABASE CUSTOMER'"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+                  <span>{isFetching ? 'Mengambil...' : 'Tarik dari Sheet'}</span>
+                </button>
+              )}
+            </>
           )}
 
           <button

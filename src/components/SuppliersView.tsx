@@ -16,10 +16,11 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import type { Supplier } from '../types/inventory.js';
+import type { Supplier, UserAccount } from '../types/inventory.js';
 
 interface SuppliersViewProps {
   suppliers: Supplier[];
+  activeUser?: UserAccount | null;
   isFetching?: boolean;
   onRefreshFromSheet?: () => void;
   onAddSupplier: (supplier: Omit<Supplier, 'id' | 'createdAt' | 'lastUpdated'>) => void;
@@ -30,6 +31,7 @@ interface SuppliersViewProps {
 
 export const SuppliersView: React.FC<SuppliersViewProps> = ({
   suppliers,
+  activeUser,
   isFetching = false,
   onRefreshFromSheet,
   onAddSupplier,
@@ -179,21 +181,25 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center space-x-1.5 px-3 py-2 bg-indigo-50 text-indigo-800 text-xs font-bold rounded-xl border border-indigo-200">
-            <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
-            <span>Sheet &quot;DATABASE SUPPLIER&quot;</span>
-          </div>
+          {activeUser?.username === 'server' && (
+            <>
+              <div className="flex items-center space-x-1.5 px-3 py-2 bg-indigo-50 text-indigo-800 text-xs font-bold rounded-xl border border-indigo-200">
+                <FileSpreadsheet className="w-4 h-4 text-indigo-600" />
+                <span>Sheet &quot;DATABASE SUPPLIER&quot;</span>
+              </div>
 
-          {onRefreshFromSheet && (
-            <button
-              onClick={onRefreshFromSheet}
-              disabled={isFetching}
-              className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:bg-slate-400"
-              title="Tarik data supplier terbaru dari Google Sheet 'DATABASE SUPPLIER'"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-              <span>{isFetching ? 'Mengambil...' : 'Tarik dari Sheet'}</span>
-            </button>
+              {onRefreshFromSheet && (
+                <button
+                  onClick={onRefreshFromSheet}
+                  disabled={isFetching}
+                  className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:bg-slate-400"
+                  title="Tarik data supplier terbaru dari Google Sheet 'DATABASE SUPPLIER'"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+                  <span>{isFetching ? 'Mengambil...' : 'Tarik dari Sheet'}</span>
+                </button>
+              )}
+            </>
           )}
 
           <button

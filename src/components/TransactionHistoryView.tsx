@@ -162,21 +162,25 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200">
-            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span>Sheet &quot;HISTORY PEMBELIAN&quot; &amp; &quot;PENJUALAN&quot;</span>
-          </div>
+          {activeUser?.username === 'server' && (
+            <>
+              <div className="flex items-center space-x-1.5 px-3 py-2 bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200">
+                <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                <span>Sheet &quot;HISTORY PEMBELIAN&quot; &amp; &quot;PENJUALAN&quot;</span>
+              </div>
 
-          {onRefreshFromSheets && (
-            <button
-              onClick={onRefreshFromSheets}
-              disabled={isFetching}
-              className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:bg-slate-400"
-              title="Tarik data riwayat pembelian & penjualan terbaru dari Google Sheets"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-              <span>{isFetching ? 'Mengambil...' : 'Tarik dari Sheet'}</span>
-            </button>
+              {onRefreshFromSheets && (
+                <button
+                  onClick={onRefreshFromSheets}
+                  disabled={isFetching}
+                  className="flex items-center space-x-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer disabled:bg-slate-400"
+                  title="Tarik data riwayat pembelian & penjualan terbaru dari Google Sheets"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+                  <span>{isFetching ? 'Mengambil...' : 'Tarik dari Sheet'}</span>
+                </button>
+              )}
+            </>
           )}
 
           <button
@@ -662,9 +666,9 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
                 {/* Brand & Invoice Header */}
                 <div className="flex items-start justify-between border-b border-slate-200 pb-4">
                   <div>
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Pusat Grosir & Eceran</h2>
-                    <p className="text-xs text-slate-500">Pusat Grosir & Eceran Terlengkap</p>
-                    <p className="text-[11px] text-slate-500 mt-1">Jl. Raya Gudang Utama No. 88, Indonesia</p>
+                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">GLOBAL MART</h2>
+                    <p className="text-xs font-semibold text-slate-600">Pusatnya belanja Alat Tulis Kantor &amp; Sekolah</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Jl. Gurita I no 38, Blok 9 Pegok-Sesetan, Denpasar-Bali</p>
                   </div>
                   <div className="text-right">
                     <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-black uppercase tracking-wider">
