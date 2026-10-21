@@ -68,6 +68,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return filteredItems.reduce((acc, item) => acc + item.currentStock, 0);
   }, [filteredItems]);
 
+  const isServerUser = activeUser?.username?.trim().toLowerCase() === 'server';
+
   return (
     <div className="space-y-6">
       {/* Top Banner: Navigation & Quick Actions */}
@@ -86,7 +88,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </p>
           </div>
 
-          {/* Action Buttons: Barang Masuk & Penjualan (without '+' on Barang Masuk) */}
+          {/* Action Buttons: Barang Masuk & Penjualan */}
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => onOpenTransactionModal('IN')}
@@ -106,8 +108,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Status Bar inside Banner (Only for server account) */}
-        {activeUser?.username === 'server' && (
+        {/* Status Bar inside Banner (Strictly ONLY for server account) */}
+        {isServerUser && (
           <div className="relative z-10 mt-5 pt-4 border-t border-slate-700/60 flex flex-wrap items-center justify-between text-xs text-slate-300 gap-3">
             <div className="flex items-center space-x-2">
               <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -189,14 +191,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* The Table:
-            - kode SKU
-            - nama barang
-            - stok Gudang
-            - stok Piranha
-            - stok Toko
-            - total stok
-        */}
+        {/* The Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs sm:text-sm">
             <thead className="bg-slate-50/90 text-slate-700 font-bold uppercase tracking-wider text-[11px] sm:text-xs border-b border-slate-200">

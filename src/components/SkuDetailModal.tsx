@@ -124,7 +124,7 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
               ) : (
                 <ShieldCheck className="w-3 h-3 text-emerald-300" />
               )}
-              <span>Status: {stockStatus} (Kolom 12)</span>
+              <span>Status: {stockStatus}</span>
             </span>
           </div>
 
@@ -132,7 +132,7 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
             <div className="space-y-1">
               <div className="flex items-center space-x-2">
                 <span className="text-xs uppercase font-semibold text-slate-400">
-                  Kolom 1 (SKU):
+                  SKU:
                 </span>
                 <span className="font-mono text-xl sm:text-2xl font-black text-white tracking-wider bg-white/10 px-3 py-0.5 rounded-xl border border-white/20">
                   {item.sku}
@@ -155,7 +155,7 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
             </div>
 
             <div className="text-left sm:text-right shrink-0">
-              <span className="text-[11px] text-slate-400 block">Total Stok Fisik (Kolom 16)</span>
+              <span className="text-[11px] text-slate-400 block">Total Stok Fisik</span>
               <span className="text-2xl font-extrabold text-emerald-400">
                 {formatNumber(totalStock)} <span className="text-sm font-semibold text-slate-300">{item.unit}</span>
               </span>
@@ -170,96 +170,93 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
             <div className="flex items-center space-x-2 text-slate-900 font-extrabold text-sm mb-3">
               <Package className="w-4 h-4 text-indigo-600" />
               <span>1. Informasi Identitas & Klasifikasi Barang</span>
-              <span className="text-[10px] font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
-                Kolom 1, 2, 3, 4, 5, 6, 7, 8, 9
-              </span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {/* Kolom 1: SKU */}
+              {/* SKU */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span className="text-[10px] text-slate-500 font-medium block">
-                  Kolom 1 — SKU
+                  SKU
                 </span>
                 <span className="font-mono font-bold text-slate-900 text-sm mt-0.5 block">
                   {item.sku}
                 </span>
               </div>
 
-              {/* Kolom 2: ID Sistem */}
+              {/* ID Sistem */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span className="text-[10px] text-slate-500 font-medium block">
-                  Kolom 2 — ID Sistem / Barcode
+                  ID Sistem / Barcode
                 </span>
                 <span className="font-mono text-slate-700 text-xs mt-0.5 block truncate">
                   {item.id}
                 </span>
               </div>
 
-              {/* Kolom 3: Nama Produk */}
+              {/* Nama Produk */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl sm:col-span-1 col-span-2">
                 <span className="text-[10px] text-slate-500 font-medium block">
-                  Kolom 3 — Nama Produk
+                  Nama Produk
                 </span>
                 <span className="font-bold text-slate-900 text-xs mt-0.5 block">
                   {item.name}
                 </span>
               </div>
 
-              {/* Kolom 4: Unit */}
+              {/* Unit */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span className="text-[10px] text-slate-500 font-medium block">
-                  Kolom 4 — Unit / Satuan
+                  Unit / Satuan
                 </span>
                 <span className="font-bold text-slate-800 text-sm mt-0.5 block">
                   {item.unit || 'pcs'}
                 </span>
               </div>
 
-              {/* Kolom 5: Isi Per Dus */}
+              {/* Isi Per Dus */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span className="text-[10px] text-slate-500 font-medium block">
-                  Kolom 5 — Isi Per Dus (Karton)
+                  Isi Per Dus (Karton)
                 </span>
                 <span className="font-bold text-amber-700 text-sm mt-0.5 block">
                   📦 {item.isiPerDus || 1} {item.unit}/dus
                 </span>
               </div>
 
-              {/* Kolom 6: Stok Minimum */}
+              {/* Stok Minimum */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span className="text-[10px] text-slate-500 font-medium block">
-                  Kolom 6 — Batas Stok Minimal
+                  Batas Stok Minimal
                 </span>
                 <span className="font-bold text-slate-800 text-sm mt-0.5 block">
                   {formatNumber(item.minStock)} {item.unit}
                 </span>
               </div>
 
-              {/* Kolom 7: Kategori */}
+              {/* Kategori */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span className="text-[10px] text-slate-500 font-medium block">
-                  Kolom 7 — Kategori Produk
+                  Kategori Produk
                 </span>
                 <span className="inline-block bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded text-xs mt-1 border border-indigo-200">
                   {item.category || 'Umum'}
                 </span>
               </div>
 
-              {/* Kolom 8: Lokasi Rak */}
+              {/* Lokasi Rak */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span className="text-[10px] text-slate-500 font-medium block">
-                  Kolom 8 — Lokasi Rak / Gudang
+                  Lokasi Rak / Gudang
                 </span>
                 <span className="font-bold text-slate-800 text-xs mt-0.5 block">
                   🏢 {item.location || 'Gudang'}
                 </span>
               </div>
 
-              {/* Kolom 9: Merk */}
+              {/* Merk */}
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-2xl">
                 <span className="text-[10px] text-slate-500 font-medium block">
-                  Kolom 9 — Merk / Brand
+                  Merk / Brand
                 </span>
                 <span className="font-bold text-slate-900 text-xs mt-0.5 block">
                   🏷️ {merk}
@@ -273,17 +270,14 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
             <div className="flex items-center space-x-2 text-slate-900 font-extrabold text-sm mb-3">
               <Coins className="w-4 h-4 text-emerald-600" />
               <span>2. Struktur Harga Pokok (HPP) & Harga Jual 3-Tier</span>
-              <span className="text-[10px] font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
-                Kolom 10, 11, 13, 14, 15
-              </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-              {/* Kolom 10: HPP (Modal) */}
+              {/* HPP (Modal) */}
               <div className="p-3.5 bg-slate-100 border border-slate-300 rounded-2xl">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] font-bold text-slate-600">
-                    Kolom 10 — HPP (Modal)
+                    HPP (Modal)
                   </span>
                   <span className="text-[10px] bg-white px-1.5 py-0.5 rounded text-slate-600 font-mono">
                     Dasar
@@ -293,15 +287,15 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
                   {formatRupiah(cost)}
                 </div>
                 <span className="text-[10px] text-slate-500 mt-1 block">
-                  Margin: {marginPercent}% (Kol. 11)
+                  Margin: {marginPercent}%
                 </span>
               </div>
 
-              {/* Kolom 13: Eceran */}
+              {/* Eceran */}
               <div className="p-3.5 bg-emerald-50/70 border-2 border-emerald-300 rounded-2xl">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] font-extrabold text-emerald-900">
-                    Kolom 13 — Eceran
+                    Eceran
                   </span>
                   <span className="text-[10px] bg-emerald-600 text-white font-bold px-1.5 py-0.2 rounded">
                     Retail
@@ -315,11 +309,11 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
                 </span>
               </div>
 
-              {/* Kolom 14: Grosir */}
+              {/* Grosir */}
               <div className="p-3.5 bg-indigo-50/70 border border-indigo-200 rounded-2xl">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] font-extrabold text-indigo-900">
-                    Kolom 14 — Grosir
+                    Grosir
                   </span>
                   <span className="text-[10px] bg-indigo-100 text-indigo-800 font-bold px-1.5 py-0.2 rounded">
                     Reseller
@@ -333,11 +327,11 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
                 </span>
               </div>
 
-              {/* Kolom 15: Partai */}
+              {/* Partai */}
               <div className="p-3.5 bg-amber-50/70 border border-amber-200 rounded-2xl">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] font-extrabold text-amber-900">
-                    Kolom 15 — Partai
+                    Partai
                   </span>
                   <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.2 rounded">
                     Koli/Dus
@@ -358,17 +352,14 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
             <div className="flex items-center space-x-2 text-slate-900 font-extrabold text-sm mb-3">
               <Boxes className="w-4 h-4 text-blue-600" />
               <span>3. Posisi Stok Per Gudang & Total Nilai Modal</span>
-              <span className="text-[10px] font-normal text-slate-400 bg-slate-100 px-2 py-0.5 rounded-md">
-                Kolom 16, 17, 18, 19, 20
-              </span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {/* Kolom 17: Stok Gudang */}
+              {/* Stok Gudang */}
               <div className="p-3.5 bg-blue-50/60 border border-blue-200 rounded-2xl">
                 <div className="flex items-center space-x-1.5 text-blue-900 font-bold mb-1">
                   <Warehouse className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="text-[10px]">Kolom 17 — Gudang</span>
+                  <span className="text-[10px]">Gudang</span>
                 </div>
                 <div className="text-lg font-extrabold text-blue-900">
                   {formatNumber(stockGudang)} <span className="text-xs font-medium">{item.unit}</span>
@@ -378,11 +369,11 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
                 </span>
               </div>
 
-              {/* Kolom 18: Stok Toko */}
+              {/* Stok Toko */}
               <div className="p-3.5 bg-amber-50/60 border border-amber-200 rounded-2xl">
                 <div className="flex items-center space-x-1.5 text-amber-900 font-bold mb-1">
                   <Store className="w-3.5 h-3.5 text-amber-600" />
-                  <span className="text-[10px]">Kolom 18 — Toko</span>
+                  <span className="text-[10px]">Toko</span>
                 </div>
                 <div className="text-lg font-extrabold text-amber-900">
                   {formatNumber(stockToko)} <span className="text-xs font-medium">{item.unit}</span>
@@ -392,11 +383,11 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
                 </span>
               </div>
 
-              {/* Kolom 19: Stok Piranha */}
+              {/* Stok Piranha */}
               <div className="p-3.5 bg-teal-50/60 border border-teal-200 rounded-2xl">
                 <div className="flex items-center space-x-1.5 text-teal-900 font-bold mb-1">
                   <Building2 className="w-3.5 h-3.5 text-teal-600" />
-                  <span className="text-[10px]">Kolom 19 — Piranha</span>
+                  <span className="text-[10px]">Piranha</span>
                 </div>
                 <div className="text-lg font-extrabold text-teal-900">
                   {formatNumber(stockPiranha)} <span className="text-xs font-medium">{item.unit}</span>
@@ -406,17 +397,17 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
                 </span>
               </div>
 
-              {/* Kolom 20: Total Nilai Modal */}
+              {/* Total Nilai Modal */}
               <div className="p-3.5 bg-emerald-50/70 border border-emerald-300 rounded-2xl">
                 <div className="flex items-center space-x-1.5 text-emerald-900 font-bold mb-1">
                   <Coins className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-[10px]">Kolom 20 — Total Nilai Modal</span>
+                  <span className="text-[10px]">Total Nilai Modal</span>
                 </div>
                 <div className="text-base sm:text-lg font-extrabold text-emerald-900">
                   {formatRupiah(totalStockValue)}
                 </div>
                 <span className="text-[10px] text-emerald-700 block mt-0.5">
-                  Total: {formatNumber(totalStock)} {item.unit} (Kol. 16)
+                  Total: {formatNumber(totalStock)} {item.unit}
                 </span>
               </div>
             </div>
@@ -424,22 +415,22 @@ export const SkuDetailModal: React.FC<SkuDetailModalProps> = ({
 
           {/* Section 4: Catatan & Waktu Update Sesuai Sheet */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
-            {/* Kolom 21: Catatan */}
+            {/* Catatan */}
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
               <div className="flex items-center space-x-1.5 text-slate-700 font-bold mb-1">
                 <FileText className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-[10px]">Kolom 21 — Catatan / Keterangan</span>
+                <span className="text-[10px]">Catatan / Keterangan</span>
               </div>
               <p className="text-slate-800 text-xs italic">
                 {item.notes || 'Tidak ada catatan tambahan.'}
               </p>
             </div>
 
-            {/* Kolom 22: Terakhir Update */}
+            {/* Terakhir Update */}
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
               <div className="flex items-center space-x-1.5 text-slate-700 font-bold mb-1">
                 <Clock className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-[10px]">Kolom 22 — Terakhir Diperbarui</span>
+                <span className="text-[10px]">Terakhir Diperbarui</span>
               </div>
               <p className="text-slate-800 text-xs font-mono font-semibold">
                 {item.lastUpdated || '-'}
