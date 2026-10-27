@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import type { Supplier, UserAccount } from '../types/inventory.js';
+import { hasPermission } from '../utils/inventory.js';
 
 interface SuppliersViewProps {
   suppliers: Supplier[];
@@ -210,13 +211,15 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({
             <span>Export to Excel</span>
           </button>
 
-          <button
-            onClick={openAddModal}
-            className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/20 transition-all shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>+ Tambah Supplier Baru</span>
-          </button>
+          {hasPermission(activeUser, 'suppliers', 'add') && (
+            <button
+              onClick={openAddModal}
+              className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/20 transition-all shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>+ Tambah Supplier Baru</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -297,7 +300,7 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({
                     </td>
                     <td className="px-4 py-3 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center space-x-1.5">
-                        {onSelectSupplierForTransaction && (
+                        {onSelectSupplierForTransaction && hasPermission(activeUser, 'history_in', 'add') && (
                           <button
                             type="button"
                             onClick={() => onSelectSupplierForTransaction(s)}
@@ -308,22 +311,26 @@ export const SuppliersView: React.FC<SuppliersViewProps> = ({
                             <span>Input Masuk</span>
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => openEditModal(s)}
-                          title="Edit Data Supplier"
-                          className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onDeleteSupplier(s.id)}
-                          title="Hapus Supplier"
-                          className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {hasPermission(activeUser, 'suppliers', 'edit') && (
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(s)}
+                            title="Edit Data Supplier"
+                            className="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {hasPermission(activeUser, 'suppliers', 'delete') && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteSupplier(s.id)}
+                            title="Hapus Supplier"
+                            className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

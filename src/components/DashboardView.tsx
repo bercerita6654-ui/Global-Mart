@@ -10,7 +10,7 @@ import {
   Eye,
 } from 'lucide-react';
 import type { Item, Transaction, StockSummary, SpreadsheetConfig, UserAccount } from '../types/inventory.js';
-import { formatNumber, getStockGudang, getStockPiranha, getStockToko } from '../utils/inventory.js';
+import { formatNumber, getStockGudang, getStockPiranha, getStockToko, hasPermission } from '../utils/inventory.js';
 import { SkuDetailModal } from './SkuDetailModal.js';
 
 interface DashboardViewProps {
@@ -88,23 +88,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </p>
           </div>
 
-          {/* Action Buttons: Barang Masuk & Penjualan */}
+          {/* Action Buttons: Barang Masuk & Penjualan (Guarded by permissions) */}
           <div className="flex flex-wrap items-center gap-3">
-            <button
-              onClick={() => onOpenTransactionModal('IN')}
-              className="flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
-            >
-              <ArrowDownLeft className="w-4 h-4" />
-              <span>Barang Masuk</span>
-            </button>
+            {hasPermission(activeUser, 'history_in', 'add') && (
+              <button
+                onClick={() => onOpenTransactionModal('IN')}
+                className="flex items-center space-x-2 bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-emerald-500/25 transition-all cursor-pointer"
+              >
+                <ArrowDownLeft className="w-4 h-4" />
+                <span>Barang Masuk</span>
+              </button>
+            )}
 
-            <button
-              onClick={() => onOpenTransactionModal('OUT')}
-              className="flex items-center space-x-2 bg-rose-500 hover:bg-rose-600 active:bg-rose-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-rose-500/25 transition-all cursor-pointer"
-            >
-              <ArrowUpRight className="w-4 h-4" />
-              <span>Penjualan</span>
-            </button>
+            {hasPermission(activeUser, 'history_out', 'add') && (
+              <button
+                onClick={() => onOpenTransactionModal('OUT')}
+                className="flex items-center space-x-2 bg-rose-500 hover:bg-rose-600 active:bg-rose-700 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-rose-500/25 transition-all cursor-pointer"
+              >
+                <ArrowUpRight className="w-4 h-4" />
+                <span>Penjualan</span>
+              </button>
+            )}
           </div>
         </div>
 

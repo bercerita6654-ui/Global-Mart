@@ -191,21 +191,25 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
             <span>Export to Excel</span>
           </button>
 
-          <button
-            onClick={() => onOpenTransactionModal('IN')}
-            className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-colors"
-          >
-            <ArrowDownLeft className="w-4 h-4" />
-            <span>Barang Masuk</span>
-          </button>
+          {hasPermission(activeUser, 'history_in', 'add') && (
+            <button
+              onClick={() => onOpenTransactionModal('IN')}
+              className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-colors"
+            >
+              <ArrowDownLeft className="w-4 h-4" />
+              <span>Barang Masuk</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => onOpenTransactionModal('OUT')}
-            className="flex items-center space-x-1.5 bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-colors"
-          >
-            <ArrowUpRight className="w-4 h-4" />
-            <span>- Penjualan</span>
-          </button>
+          {hasPermission(activeUser, 'history_out', 'add') && (
+            <button
+              onClick={() => onOpenTransactionModal('OUT')}
+              className="flex items-center space-x-1.5 bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-colors"
+            >
+              <ArrowUpRight className="w-4 h-4" />
+              <span>- Penjualan</span>
+            </button>
+          )}
         </div>
       </div>
 

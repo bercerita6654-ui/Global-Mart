@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import type { Customer, CustomerType, PaymentMethod, CreditTerm, UserAccount } from '../types/inventory.js';
 import { SALES_PERSONS } from '../types/inventory.js';
+import { hasPermission } from '../utils/inventory.js';
 
 interface CustomersViewProps {
   customers: Customer[];
@@ -262,13 +263,15 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
             <span>Ekspor CSV</span>
           </button>
 
-          <button
-            onClick={openAddModal}
-            className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-emerald-600/20 transition-colors shrink-0"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tambah Customer Baru</span>
-          </button>
+          {hasPermission(activeUser, 'customers', 'add') && (
+            <button
+              onClick={openAddModal}
+              className="flex items-center space-x-2 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-4 py-2.5 rounded-xl text-sm font-bold shadow-md shadow-emerald-600/20 transition-colors shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Customer Baru</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -483,7 +486,7 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
 
                       <td className="px-4 py-3.5 text-center whitespace-nowrap">
                         <div className="flex items-center justify-center space-x-1.5">
-                          {onSelectCustomerForTransaction && (
+                          {onSelectCustomerForTransaction && hasPermission(activeUser, 'history_out', 'add') && (
                             <button
                               type="button"
                               onClick={() => onSelectCustomerForTransaction(cust)}
@@ -494,22 +497,26 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
                               <span>Penjualan</span>
                             </button>
                           )}
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(cust)}
-                            title="Edit Data Customer"
-                            className="p-1.5 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => onDeleteCustomer(cust.id)}
-                            title="Hapus Customer"
-                            className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {hasPermission(activeUser, 'customers', 'edit') && (
+                            <button
+                              type="button"
+                              onClick={() => openEditModal(cust)}
+                              title="Edit Data Customer"
+                              className="p-1.5 hover:bg-slate-100 text-slate-600 rounded-lg transition-colors"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {hasPermission(activeUser, 'customers', 'delete') && (
+                            <button
+                              type="button"
+                              onClick={() => onDeleteCustomer(cust.id)}
+                              title="Hapus Customer"
+                              className="p-1.5 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
