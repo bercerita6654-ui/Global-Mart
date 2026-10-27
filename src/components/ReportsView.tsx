@@ -224,40 +224,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ items, transactions, s
               className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 text-xs font-medium focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
             />
 
-            <div className="flex items-center space-x-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setStartDate(`${currentMonthStr}-01`);
-                  setEndDate(todayStr);
-                }}
-                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
-              >
-                Bulan Ini
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const d = new Date();
-                  d.setDate(d.getDate() - 30);
-                  setStartDate(d.toISOString().slice(0, 10));
-                  setEndDate(todayStr);
-                }}
-                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
-              >
-                30 Hari Terakhir
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setStartDate('');
-                  setEndDate('');
-                }}
-                className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold"
-              >
-                Semua Waktu
-              </button>
-            </div>
+
           </div>
 
           <div className="relative min-w-[220px]">

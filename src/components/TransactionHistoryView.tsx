@@ -55,10 +55,19 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
   const [endDate, setEndDate] = useState('');
   const [selectedReceiptTx, setSelectedReceiptTx] = useState<Transaction | null>(null);
 
-  // Keep in sync if initialTypeFilter changes externally
+  const canViewIn = hasPermission(activeUser, 'history_in', 'view');
+  const canViewOut = hasPermission(activeUser, 'history_out', 'view');
+
+  // Keep in sync if initialTypeFilter changes externally or restrict based on view permissions
   React.useEffect(() => {
-    setSelectedType(initialTypeFilter);
-  }, [initialTypeFilter]);
+    if (!canViewIn && canViewOut && selectedType !== 'OUT') {
+      setSelectedType('OUT');
+    } else if (canViewIn && !canViewOut && selectedType !== 'IN') {
+      setSelectedType('IN');
+    } else {
+      setSelectedType(initialTypeFilter);
+    }
+  }, [initialTypeFilter, canViewIn, canViewOut]);
 
   const handleSelectType = (t: 'ALL' | 'IN' | 'OUT') => {
     setSelectedType(t);
@@ -214,58 +223,64 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
       </div>
 
       {/* Main Mode Navigation Tabs (Pilihan Menu Terpisah) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-1.5 bg-slate-200/70 rounded-2xl">
-        <button
-          type="button"
-          onClick={() => handleSelectType('ALL')}
-          className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-            selectedType === 'ALL'
-              ? 'bg-white text-slate-900 shadow-md ring-1 ring-slate-300'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-          }`}
-        >
-          <FileSpreadsheet className="w-4 h-4 text-slate-500" />
-          <span>Semua Mutasi</span>
-          <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700 font-extrabold">
-            {transactions.length}
-          </span>
-        </button>
+      <div className="flex flex-wrap items-center gap-3 p-1.5 bg-slate-200/70 rounded-2xl">
+        {canViewIn && canViewOut && (
+          <button
+            type="button"
+            onClick={() => handleSelectType('ALL')}
+            className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              selectedType === 'ALL'
+                ? 'bg-white text-slate-900 shadow-md ring-1 ring-slate-300'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+            }`}
+          >
+            <FileSpreadsheet className="w-4 h-4 text-slate-500" />
+            <span>Semua Mutasi</span>
+            <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs bg-slate-100 text-slate-700 font-extrabold">
+              {transactions.length}
+            </span>
+          </button>
+        )}
 
-        <button
-          type="button"
-          onClick={() => handleSelectType('IN')}
-          className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-            selectedType === 'IN'
-              ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400'
-              : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50/50'
-          }`}
-        >
-          <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
-          <span>History Pembelian</span>
-          <span className={`ml-1.5 px-2 py-0.5 rounded-full text-xs font-extrabold ${
-            selectedType === 'IN' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
-          }`}>
-            {totalInTransactions}
-          </span>
-        </button>
+        {canViewIn && (
+          <button
+            type="button"
+            onClick={() => handleSelectType('IN')}
+            className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              selectedType === 'IN'
+                ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400'
+                : 'text-slate-600 hover:text-emerald-700 hover:bg-emerald-50/50'
+            }`}
+          >
+            <ArrowDownLeft className="w-4 h-4 text-emerald-400" />
+            <span>History Pembelian</span>
+            <span className={`ml-1.5 px-2 py-0.5 rounded-full text-xs font-extrabold ${
+              selectedType === 'IN' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+            }`}>
+              {totalInTransactions}
+            </span>
+          </button>
+        )}
 
-        <button
-          type="button"
-          onClick={() => handleSelectType('OUT')}
-          className={`flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
-            selectedType === 'OUT'
-              ? 'bg-rose-600 text-white shadow-md ring-2 ring-rose-400'
-              : 'text-slate-600 hover:text-rose-700 hover:bg-rose-50/50'
-          }`}
-        >
-          <ArrowUpRight className="w-4 h-4 text-rose-400" />
-          <span>History Penjualan</span>
-          <span className={`ml-1.5 px-2 py-0.5 rounded-full text-xs font-extrabold ${
-            selectedType === 'OUT' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-800'
-          }`}>
-            {totalOutTransactions}
-          </span>
-        </button>
+        {canViewOut && (
+          <button
+            type="button"
+            onClick={() => handleSelectType('OUT')}
+            className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+              selectedType === 'OUT'
+                ? 'bg-rose-600 text-white shadow-md ring-2 ring-rose-400'
+                : 'text-slate-600 hover:text-rose-700 hover:bg-rose-50/50'
+            }`}
+          >
+            <ArrowUpRight className="w-4 h-4 text-rose-400" />
+            <span>History Penjualan</span>
+            <span className={`ml-1.5 px-2 py-0.5 rounded-full text-xs font-extrabold ${
+              selectedType === 'OUT' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-800'
+            }`}>
+              {totalOutTransactions}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Mode-specific Metric Summary Banner */}
@@ -351,45 +366,7 @@ export const TransactionHistoryView: React.FC<TransactionHistoryViewProps> = ({
               onChange={(e) => setEndDate(e.target.value)}
               className="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 text-xs font-medium focus:bg-white focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
             />
-            <div className="flex items-center space-x-1">
-              <button
-                type="button"
-                onClick={() => {
-                  const today = new Date().toISOString().slice(0, 10);
-                  setStartDate(today);
-                  setEndDate(today);
-                }}
-                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold"
-              >
-                Hari Ini
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const end = new Date();
-                  const start = new Date();
-                  start.setDate(start.getDate() - 7);
-                  setStartDate(start.toISOString().slice(0, 10));
-                  setEndDate(end.toISOString().slice(0, 10));
-                }}
-                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold"
-              >
-                7 Hari
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const now = new Date();
-                  const y = now.getFullYear();
-                  const m = String(now.getMonth() + 1).padStart(2, '0');
-                  setStartDate(`${y}-${m}-01`);
-                  setEndDate(now.toISOString().slice(0, 10));
-                }}
-                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-semibold"
-              >
-                Bulan Ini
-              </button>
-            </div>
+
             {(startDate || endDate) && (
               <button
                 type="button"

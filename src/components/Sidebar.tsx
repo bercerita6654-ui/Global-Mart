@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import type { User } from 'firebase/auth';
 import type { SpreadsheetConfig, UserAccount } from '../types/inventory.js';
-import { isMenuAllowed } from '../utils/inventory.js';
+import { isMenuAllowed, hasPermission } from '../utils/inventory.js';
 
 interface SidebarProps {
   activeTab: 'dashboard' | 'master' | 'history' | 'reports' | 'customers' | 'suppliers' | 'accounts';
@@ -113,53 +113,59 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                 {/* Submenu Pilihan Mutasi Barang Masuk & Barang Keluar */}
                 <div className="pl-6 pr-1 py-1 space-y-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('history');
-                      if (setHistoryFilter) setHistoryFilter('ALL');
-                    }}
-                    className={`w-full flex items-center space-x-2 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
-                      isActive && historyFilter === 'ALL'
-                        ? 'bg-slate-700/80 text-white border border-slate-600'
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                    <span>Semua Mutasi</span>
-                  </button>
+                  {hasPermission(activeUser, 'history_in', 'view') && hasPermission(activeUser, 'history_out', 'view') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('history');
+                        if (setHistoryFilter) setHistoryFilter('ALL');
+                      }}
+                      className={`w-full flex items-center space-x-2 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                        isActive && historyFilter === 'ALL'
+                          ? 'bg-slate-700/80 text-white border border-slate-600'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                      <span>Semua Mutasi</span>
+                    </button>
+                  )}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('history');
-                      if (setHistoryFilter) setHistoryFilter('IN');
-                    }}
-                    className={`w-full flex items-center space-x-2 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
-                      isActive && historyFilter === 'IN'
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                        : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span>History Pembelian</span>
-                  </button>
+                  {hasPermission(activeUser, 'history_in', 'view') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('history');
+                        if (setHistoryFilter) setHistoryFilter('IN');
+                      }}
+                      className={`w-full flex items-center space-x-2 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                        isActive && historyFilter === 'IN'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : 'text-slate-400 hover:text-emerald-300 hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <ArrowDownLeft className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span>History Pembelian</span>
+                    </button>
+                  )}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveTab('history');
-                      if (setHistoryFilter) setHistoryFilter('OUT');
-                    }}
-                    className={`w-full flex items-center space-x-2 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
-                      isActive && historyFilter === 'OUT'
-                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                        : 'text-slate-400 hover:text-rose-300 hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <ArrowUpRight className="w-3.5 h-3.5 text-rose-400 shrink-0" />
-                    <span>History Penjualan</span>
-                  </button>
+                  {hasPermission(activeUser, 'history_out', 'view') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setActiveTab('history');
+                        if (setHistoryFilter) setHistoryFilter('OUT');
+                      }}
+                      className={`w-full flex items-center space-x-2 px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all ${
+                        isActive && historyFilter === 'OUT'
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                          : 'text-slate-400 hover:text-rose-300 hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <ArrowUpRight className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                      <span>History Penjualan</span>
+                    </button>
+                  )}
                 </div>
               </div>
             );

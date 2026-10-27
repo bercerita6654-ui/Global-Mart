@@ -1220,6 +1220,7 @@ export const MasterItemsView: React.FC<MasterItemsViewProps> = ({
           setViewingDetailItem(null);
           onOpenTransactionModal(type, itemId);
         }}
+        activeUser={activeUser}
       />
     </div>
   );

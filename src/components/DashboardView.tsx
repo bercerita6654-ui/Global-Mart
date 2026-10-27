@@ -303,6 +303,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         isOpen={!!selectedDetailItem}
         onClose={() => setSelectedDetailItem(null)}
         onOpenTransaction={onOpenTransactionModal}
+        activeUser={activeUser}
       />
     </div>
   );

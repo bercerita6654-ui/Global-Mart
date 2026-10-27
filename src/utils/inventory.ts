@@ -790,16 +790,24 @@ export function hasPermission(
   if (!user) return false;
   if (menuId === 'accounts' && user.username !== 'server') return false;
   if (user.username === 'server' || user.role === 'Super User') return true;
-  if (!user.allowedMenus || user.allowedMenus.length === 0 || user.allowedMenus.includes('ALL')) return true;
 
-  // Explicit action token (e.g. 'master:add', 'master:view', 'master:edit', 'master:delete')
-  if (user.allowedMenus.includes(`${menuId}:${action}`)) return true;
+  // Akun gudang tidak diizinkan melakukan input, edit, atau hapus
+  if (user.username?.toLowerCase() === 'gudang' && (action === 'add' || action === 'edit' || action === 'delete')) {
+    return false;
+  }
 
-  // If general menu ID is in allowedMenus (e.g. 'master'), grant action
-  if (user.allowedMenus.includes(menuId)) return true;
+  // Jika allowedMenus berisi 'ALL', izinkan semua aksi
+  if (user.allowedMenus && user.allowedMenus.includes('ALL')) return true;
 
-  // Parent history fallback
-  if (menuId.startsWith('history_') && user.allowedMenus.includes('history')) return true;
+  // Token aksi spesifik (misal: 'master:add', 'master:view', 'history_in:add', 'history_out:add')
+  if (user.allowedMenus && user.allowedMenus.includes(`${menuId}:${action}`)) return true;
+
+  // Untuk aksi 'view', izinkan jika ID menu umum atau parent 'history' ada
+  if (action === 'view') {
+    if (!user.allowedMenus || user.allowedMenus.length === 0) return true;
+    if (user.allowedMenus.includes(menuId)) return true;
+    if (menuId.startsWith('history_') && user.allowedMenus.includes('history')) return true;
+  }
 
   return false;
 }

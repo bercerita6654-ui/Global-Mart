@@ -544,11 +544,12 @@ export const INITIAL_ACCOUNTS: UserAccount[] = [
     password: 'gudang123',
     name: 'Petugas Gudang',
     role: 'Purchasing',
+    allowedMenus: ['dashboard:view', 'master:view', 'customers:view', 'suppliers:view', 'history_in:view', 'history_out:view', 'reports:view'],
     email: 'gudang@globalmart.id',
     phone: '081298765432',
     status: 'Aktif',
     lastLogin: '2026-10-20 07:30',
-    notes: 'Petugas Penerimaan Barang Masuk & Penataan Stok Rak',
+    notes: 'Petugas Gudang - Akses Lihat Stok & Riwayat Mutasi (Tidak Boleh Input)',
   },
   {
     id: 'USR-003',
