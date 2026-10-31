@@ -23,26 +23,35 @@ import type { UserAccount, UserRole } from '../types/inventory.js';
 
 interface AccountsViewProps {
   accounts: UserAccount[];
+  salesPersons?: string[];
   activeUser: UserAccount | null;
   onAddAccount: (account: UserAccount) => void;
   onUpdateAccount: (account: UserAccount) => void;
   onDeleteAccount: (id: string) => void;
+  onAddSalesPerson?: (name: string) => void;
+  onDeleteSalesPerson?: (name: string) => void;
   onRefreshFromSheet?: () => Promise<void>;
   isSyncing?: boolean;
 }
 
 export const AccountsView: React.FC<AccountsViewProps> = ({
   accounts,
+  salesPersons = [],
   activeUser,
   onAddAccount,
   onUpdateAccount,
   onDeleteAccount,
+  onAddSalesPerson,
+  onDeleteSalesPerson,
   onRefreshFromSheet,
   isSyncing = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL');
   const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
+  const [activeSubTab, setActiveSubTab] = useState<'accounts' | 'sales'>('accounts');
+  const [newSalesName, setNewSalesName] = useState('');
+  const [salesSearchTerm, setSalesSearchTerm] = useState('');
 
   // Add / Edit Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -239,7 +248,9 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
           <button
             type="button"
             onClick={openAddModal}
-            className="flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+            className={`flex items-center space-x-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer ${
+              activeSubTab === 'sales' ? 'hidden' : ''
+            }`}
           >
             <Plus className="w-4 h-4" />
             <span>+ Tambah Akun Baru</span>
@@ -247,7 +258,156 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* Sub-Tabs: Akun Pengguna vs Tim Sales */}
+      <div className="flex items-center space-x-2 bg-slate-200/70 p-1.5 rounded-2xl w-fit">
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('accounts')}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeSubTab === 'accounts'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span>Akun Pengguna (Sheet AKUN)</span>
+          <span className="px-2 py-0.5 rounded-full text-[11px] bg-slate-100 text-slate-700 font-extrabold">
+            {accounts.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('sales')}
+          className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeSubTab === 'sales'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Users className="w-4 h-4 text-indigo-600" />
+          <span>Tim Sales (Sheet SALES)</span>
+          <span className="px-2 py-0.5 rounded-full text-[11px] bg-indigo-50 text-indigo-700 font-extrabold">
+            {salesPersons.length}
+          </span>
+        </button>
+      </div>
+
+      {activeSubTab === 'sales' ? (
+        <div className="space-y-6">
+          {/* Add Sales Form */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-4">
+            <div className="flex items-center space-x-2">
+              <span className="p-2 bg-indigo-50 text-indigo-700 rounded-xl">
+                <Users className="w-5 h-5" />
+              </span>
+              <div>
+                <h2 className="text-base font-extrabold text-slate-900">Tambah Tim Sales Baru</h2>
+                <p className="text-xs text-slate-500">Nama sales akan otomatis tersinkron ke Sheet &quot;SALES&quot; di Google Sheets.</p>
+              </div>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newSalesName.trim() || !onAddSalesPerson) return;
+                onAddSalesPerson(newSalesName.trim());
+                setNewSalesName('');
+              }}
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
+            >
+              <input
+                type="text"
+                placeholder="Masukkan nama lengkap tim sales..."
+                value={newSalesName}
+                onChange={(e) => setNewSalesName(e.target.value)}
+                className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                type="submit"
+                className="flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-600/20 transition-all cursor-pointer shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Sales</span>
+              </button>
+            </form>
+          </div>
+
+          {/* Sales List Table */}
+          <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden">
+            <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center space-x-3">
+                <span className="p-2.5 bg-indigo-50 text-indigo-700 rounded-2xl border border-indigo-100">
+                  <Users className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-extrabold text-slate-900">Daftar Tim Sales Aktif</h3>
+                  <p className="text-xs text-slate-500">Total {salesPersons.length} sales terdaftar dalam sistem.</p>
+                </div>
+              </div>
+
+              <div className="relative min-w-[240px] sm:w-80">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                <input
+                  type="text"
+                  placeholder="Cari nama sales..."
+                  value={salesSearchTerm}
+                  onChange={(e) => setSalesSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-800 focus:bg-white focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm">
+                <thead className="bg-slate-50/90 text-slate-700 font-bold uppercase tracking-wider text-[11px] sm:text-xs border-b border-slate-200">
+                  <tr>
+                    <th className="px-6 py-3.5 w-16">No</th>
+                    <th className="px-6 py-3.5">Nama Tim Sales / Representative</th>
+                    <th className="px-6 py-3.5 text-center w-32">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {salesPersons.length === 0 ? (
+                    <tr>
+                      <td colSpan={3} className="text-center py-12 text-slate-500">
+                        <Users className="w-9 h-9 text-slate-300 mx-auto mb-2" />
+                        <p className="font-bold text-slate-700 text-sm">Belum ada data tim sales</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    salesPersons
+                      .filter((s) => !salesSearchTerm || s.toLowerCase().includes(salesSearchTerm.toLowerCase()))
+                      .map((sales, idx) => (
+                        <tr key={`${sales}-${idx}`} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="px-6 py-3.5 font-bold text-slate-500">{idx + 1}</td>
+                          <td className="px-6 py-3.5 font-bold text-slate-900 flex items-center space-x-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            <span>{sales}</span>
+                          </td>
+                          <td className="px-6 py-3.5 text-center">
+                            {onDeleteSalesPerson && (
+                              <button
+                                type="button"
+                                onClick={() => onDeleteSalesPerson(sales)}
+                                title={`Hapus sales ${sales}`}
+                                className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-colors cursor-pointer inline-flex items-center space-x-1 text-xs font-bold"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Hapus</span>
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="p-3.5 bg-white border border-slate-200 rounded-2xl shadow-xs">
           <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Total User</span>
@@ -485,6 +645,8 @@ export const AccountsView: React.FC<AccountsViewProps> = ({
           </table>
         </div>
       </div>
+        </>
+      )}
 
       {/* Add / Edit Modal */}
       {isModalOpen && (

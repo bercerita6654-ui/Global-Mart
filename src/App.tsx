@@ -669,6 +669,42 @@ export default function App() {
     });
   };
 
+  // Sales Person Handlers (Otomatis masuk ke sheet "SALES")
+  const handleAddSalesPerson = (salesName: string) => {
+    const trimmed = salesName.trim();
+    if (!trimmed) return;
+    if (salesPersons.includes(trimmed)) {
+      showToast('error', `Sales [${trimmed}] sudah terdaftar.`);
+      return;
+    }
+    const updated = [...salesPersons, trimmed];
+    setSalesPersons(updated);
+    showToast('success', `Tim Sales [${trimmed}] berhasil ditambahkan ke Google Sheets (Sheet SALES).`);
+    autoSyncMutationToSheets('SALES', {
+      newSalesPersons: updated,
+      singleSales: trimmed,
+    });
+  };
+
+  const handleDeleteSalesPerson = (salesName: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: `Hapus Sales '${salesName}'?`,
+      message: `Apakah Anda yakin ingin menghapus sales [${salesName}] dari daftar?`,
+      confirmLabel: 'Ya, Hapus Sales',
+      isDestructive: true,
+      onConfirm: () => {
+        const updated = salesPersons.filter((s) => s !== salesName);
+        setSalesPersons(updated);
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        showToast('info', `Tim Sales [${salesName}] telah dihapus.`);
+        autoSyncMutationToSheets('SALES', {
+          newSalesPersons: updated,
+        });
+      },
+    });
+  };
+
   const handleLoginAccount = async (acc: UserAccount) => {
     setActiveUser(acc);
     // Update lastLogin on account
@@ -1669,10 +1705,13 @@ export default function App() {
         {activeTab === 'accounts' && (
           <AccountsView
             accounts={accounts}
+            salesPersons={salesPersons}
             activeUser={activeUser}
             onAddAccount={handleAddAccount}
             onUpdateAccount={handleUpdateAccount}
             onDeleteAccount={handleDeleteAccount}
+            onAddSalesPerson={handleAddSalesPerson}
+            onDeleteSalesPerson={handleDeleteSalesPerson}
             onRefreshFromSheet={handleFetchAccountsFromSheet}
             isSyncing={isSyncing || isFetchingAccounts}
           />
