@@ -632,51 +632,41 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             </div>
           </div>
 
-          {/* Pilihan Gudang Tujuan untuk Input Barang Masuk (Penerimaan) */}
-          {type === 'IN' && (
-            <div className="p-4 bg-emerald-50/70 border border-emerald-200 rounded-2xl space-y-3">
+          {/* Pilihan Gudang / Lokasi Stok (Masuk atau Keluar) */}
+          {(type === 'IN' || type === 'OUT') && (
+            <div className={`p-4 rounded-2xl border space-y-3 ${
+              type === 'IN' ? 'bg-emerald-50/70 border-emerald-200' : 'bg-rose-50/70 border-rose-200'
+            }`}>
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold uppercase tracking-wider text-emerald-900">
-                  Gudang Tujuan Penerimaan Barang <span className="text-rose-500">*</span>
+                <label className={`block text-xs font-bold uppercase tracking-wider ${
+                  type === 'IN' ? 'text-emerald-900' : 'text-rose-900'
+                }`}>
+                  {type === 'IN' ? 'Gudang Tujuan Penerimaan Barang' : 'Pilih Lokasi Stok yang Mau Dipotong'} <span className="text-rose-500">*</span>
                 </label>
-                <span className="text-[11px] text-emerald-700 font-semibold">Pilih lokasi masuk stok:</span>
+                <span className={`text-[11px] font-semibold ${type === 'IN' ? 'text-emerald-700' : 'text-rose-700'}`}>
+                  {type === 'IN' ? 'Pilih lokasi masuk stok:' : 'Pilih lokasi gudang/toko pengurang stok:'}
+                </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <button
                   type="button"
                   onClick={() => setTargetWarehouse('Gudang')}
-                  className={`p-3 rounded-xl border text-left transition-all ${
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     targetWarehouse === 'Gudang' || targetWarehouse === 'Gudang Utama'
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-400'
+                      ? (type === 'IN' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-400' : 'bg-rose-600 text-white border-rose-600 shadow-md ring-2 ring-rose-400')
                       : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
                   }`}
                 >
                   <div className="flex items-center space-x-2">
                     <span className="text-base">🏢</span>
                     <div>
-                      <p className="font-extrabold text-sm">Gudang</p>
-                      <p className={`text-[11px] ${targetWarehouse === 'Gudang' || targetWarehouse === 'Gudang Utama' ? 'text-emerald-100' : 'text-slate-500'}`}>
-                        Pusat Gudang
-                      </p>
-                    </div>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setTargetWarehouse('Piranha')}
-                  className={`p-3 rounded-xl border text-left transition-all ${
-                    targetWarehouse === 'Piranha' || targetWarehouse === 'Gudang Piranha'
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-400'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <span className="text-base">🏢</span>
-                    <div>
-                      <p className="font-extrabold text-sm">Piranha</p>
-                      <p className={`text-[11px] ${targetWarehouse === 'Piranha' || targetWarehouse === 'Gudang Piranha' ? 'text-emerald-100' : 'text-slate-500'}`}>
-                        Cabang Piranha
+                      <p className="font-extrabold text-sm">Stok Gudang</p>
+                      <p className={`text-[11px] ${
+                        targetWarehouse === 'Gudang' || targetWarehouse === 'Gudang Utama'
+                          ? (type === 'IN' ? 'text-emerald-100' : 'text-rose-100')
+                          : 'text-slate-500'
+                      }`}>
+                        Pusat Gudang (Kolom Q)
                       </p>
                     </div>
                   </div>
@@ -685,18 +675,46 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setTargetWarehouse('Toko')}
-                  className={`p-3 rounded-xl border text-left transition-all ${
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                     targetWarehouse === 'Toko'
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-400'
+                      ? (type === 'IN' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-400' : 'bg-rose-600 text-white border-rose-600 shadow-md ring-2 ring-rose-400')
                       : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
                   }`}
                 >
                   <div className="flex items-center space-x-2">
                     <span className="text-base">🏪</span>
                     <div>
-                      <p className="font-extrabold text-sm">Toko</p>
-                      <p className={`text-[11px] ${targetWarehouse === 'Toko' ? 'text-emerald-100' : 'text-slate-500'}`}>
-                        Display / Toko
+                      <p className="font-extrabold text-sm">Stok Toko</p>
+                      <p className={`text-[11px] ${
+                        targetWarehouse === 'Toko'
+                          ? (type === 'IN' ? 'text-emerald-100' : 'text-rose-100')
+                          : 'text-slate-500'
+                      }`}>
+                        Display / Toko (Kolom R)
+                      </p>
+                    </div>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setTargetWarehouse('Piranha')}
+                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    targetWarehouse === 'Piranha' || targetWarehouse === 'Gudang Piranha'
+                      ? (type === 'IN' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-400' : 'bg-rose-600 text-white border-rose-600 shadow-md ring-2 ring-rose-400')
+                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <span className="text-base">🏢</span>
+                    <div>
+                      <p className="font-extrabold text-sm">Stok Piranha</p>
+                      <p className={`text-[11px] ${
+                        targetWarehouse === 'Piranha' || targetWarehouse === 'Gudang Piranha'
+                          ? (type === 'IN' ? 'text-emerald-100' : 'text-rose-100')
+                          : 'text-slate-500'
+                      }`}>
+                        Cabang Piranha (Kolom S)
                       </p>
                     </div>
                   </div>
